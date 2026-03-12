@@ -55,7 +55,7 @@ def stage_prompts():
         "generate_r1_prompts",
         os.path.join(SCRIPTS_DIR, "generate_r1_prompts.py")
     )
-    mod = importlib.util.load_from_spec(spec)
+    mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     mod.main()
 

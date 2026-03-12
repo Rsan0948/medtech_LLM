@@ -57,6 +57,15 @@ class R1Teacher:
                         processed.add(row["trace_id"])
         return processed
 
+    def _extract_json(self, text: str) -> Dict[str, Any]:
+        """Parse JSON from response content, stripping markdown fences if present."""
+        text = text.strip()
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            if text.startswith("json"):
+                text = text[4:]
+        return json.loads(text.strip())
+
     def _call_r1(self, prompt: str) -> Dict[str, Any]:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -68,16 +77,15 @@ class R1Teacher:
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
             ],
-            "response_format": {"type": "json_object"},
             "temperature": 0.0,
         }
 
         for attempt in range(MAX_RETRIES):
             try:
-                resp = requests.post(DEEPSEEK_API_URL, headers=headers, json=payload, timeout=120)
+                resp = requests.post(DEEPSEEK_API_URL, headers=headers, json=payload, timeout=300)
                 resp.raise_for_status()
                 content = resp.json()["choices"][0]["message"]["content"]
-                return json.loads(content)
+                return self._extract_json(content)
             except (requests.RequestException, json.JSONDecodeError, KeyError) as e:
                 if attempt < MAX_RETRIES - 1:
                     wait = RETRY_DELAY * (2 ** attempt)
