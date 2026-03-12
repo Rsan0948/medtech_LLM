@@ -15,7 +15,6 @@ lora_parameters:
   rank: 16
   alpha: 32
   dropout: 0.05
-  target_modules: ["q_proj", "v_proj", "k_proj", "o_proj"]
 
 # Training Loop
 epochs: 3
@@ -28,10 +27,5 @@ warmup_steps: 100
 # Performance Monitoring
 save_every: 100
 test_every: 50
-report_to: "none" # Set to "wandb" if tracking externally
-
 # Validation
 val_batches: 25
-early_stopping:
-  patience: 3
-  min_delta: 0.01

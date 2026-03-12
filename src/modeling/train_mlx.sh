@@ -13,7 +13,6 @@ mkdir -p logs/training
 python -m mlx_lm.lora \
     --config config/training_config.yaml \
     --train \
-    --iters 1000 \
     --seed 42 \
     2>&1 | tee logs/training/run_$(date +%Y%m%d_%H%M%S).log
 
