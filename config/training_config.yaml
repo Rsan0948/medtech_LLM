@@ -20,7 +20,7 @@ lora_parameters:
 # Training Loop
 epochs: 3
 batch_size: 4
-grad_accumulation_steps: 4 # Effective batch size 16
+gradient_accumulation_steps: 4 # Effective batch size 16
 learning_rate: 2e-4
 lr_schedule: "cosine"
 warmup_steps: 100

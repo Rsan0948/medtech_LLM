@@ -127,7 +127,7 @@ class ClinVarIngestor:
     def _parse_hgvs(self, summary: Dict) -> tuple:
         """Return (hgvs_c, hgvs_p) strings."""
         hgvs_c, hgvs_p = "", None
-        for expr in summary.get("variation_set", [{}])[0].get("variation_hgvs", []):
+        for expr in (summary.get("variation_set") or [{}])[0].get("variation_hgvs", []):
             assembly = expr.get("assembly_name", "")
             mol_type = expr.get("mol_type", "")
             hgvs = expr.get("hgvs", "")
@@ -147,7 +147,7 @@ class ClinVarIngestor:
         gold_stars = REVIEW_STATUS_TO_STARS.get(review_status.lower(), 0)
 
         # Location
-        loc = summary.get("variation_set", [{}])[0].get("variation_loc", [{}])
+        loc = (summary.get("variation_set") or [{}])[0].get("variation_loc", [{}])
         chrom = str(loc[0].get("chr", "")) if loc else ""
         position = int(loc[0].get("start", 0)) if loc else 0
         ref = loc[0].get("ref_allele", "") if loc else ""
@@ -159,7 +159,7 @@ class ClinVarIngestor:
             hgvs_c = summary.get("title", "")
 
         # Variant type
-        var_type = summary.get("variation_set", [{}])[0].get("variant_type", "single nucleotide variant")
+        var_type = (summary.get("variation_set") or [{}])[0].get("variant_type", "single nucleotide variant")
 
         # gnomAD allele frequency (not directly in esummary — default to None)
         # CADD/SIFT/PolyPhen also not in esummary; these would require Ensembl VEP enrichment

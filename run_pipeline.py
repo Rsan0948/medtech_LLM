@@ -86,7 +86,7 @@ def stage_train():
     print("\n[Stage 6] MLX LoRA Fine-Tuning")
     print("-" * 40)
     train_script = os.path.join(os.path.dirname(__file__), 'src', 'modeling', 'train_mlx.sh')
-    result = subprocess.run(["bash", train_script], cwd=os.path.dirname(__file__))
+    result = subprocess.run(["bash", train_script], cwd=os.path.dirname(os.path.abspath(__file__)))
     if result.returncode != 0:
         print(f"ERROR: Training script exited with code {result.returncode}")
         sys.exit(result.returncode)
