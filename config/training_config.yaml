@@ -1,0 +1,37 @@
+# ZDS v1.0 Training Configuration (MedTech Optimized)
+# Optimized for: Mac Studio M1 (64GB)
+# Model Target: Qwen2.5-7B-Instruct / Qwen2.5-14B-Instruct
+
+# Dataset Paths
+data: "data/app/training_data/" # Should contain train.jsonl and valid.jsonl
+
+# Model Settings
+model: "Qwen/Qwen2.5-7B-Instruct" # Change to 14B for high-stakes runs
+adapter_path: "models/adapters/genomics_v1"
+
+# LoRA Hyperparameters
+lora_layers: 16
+lora_parameters:
+  rank: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: ["q_proj", "v_proj", "k_proj", "o_proj"]
+
+# Training Loop
+epochs: 3
+batch_size: 4
+grad_accumulation_steps: 4 # Effective batch size 16
+learning_rate: 2e-4
+lr_schedule: "cosine"
+warmup_steps: 100
+
+# Performance Monitoring
+save_every: 100
+test_every: 50
+report_to: "none" # Set to "wandb" if tracking externally
+
+# Validation
+val_batches: 25
+early_stopping:
+  patience: 3
+  min_delta: 0.01
