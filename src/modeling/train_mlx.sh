@@ -1,4 +1,5 @@
 #!/bin/bash
+set -o pipefail
 # ZDS-ID: TOOL-700 (Student Model Training Protocol)
 # Starts MLX-LM LoRA fine-tuning for Genomic Variant Classification.
 
