@@ -73,4 +73,4 @@ if __name__ == "__main__":
         input_path="data/processed/variant_traces_raw.jsonl",
         output_path="data/processed/variant_traces_cqf_tier1.jsonl"
     )
-    # filter_gate.run()  <-- Ready for injection
+    filter_gate.run()

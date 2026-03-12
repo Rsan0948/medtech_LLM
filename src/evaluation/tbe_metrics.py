@@ -93,5 +93,5 @@ class TBEMetrics:
 if __name__ == "__main__":
     # Test path - will be populated after Stage 7 (Evaluation)
     eval_engine = TBEMetrics(results_path="data/app/student_tbe_results.jsonl")
-    # eval_engine.process_test_set()
-    # eval_engine.report()
+    eval_engine.process_test_set()
+    eval_engine.report()
