@@ -65,8 +65,9 @@ def stage_teacher():
     print("-" * 40)
     from modeling.r1_teacher import R1Teacher
     teacher = R1Teacher(
-        prompts_path="data/app/teacher_prompts.jsonl",
+        prompts_path="data/app/teacher_prompts_1k.jsonl",
         output_path="data/app/teacher_responses.jsonl",
+        max_workers=5,
     )
     teacher.run()
 

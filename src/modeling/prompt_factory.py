@@ -43,11 +43,18 @@ ADDITIONAL ACMG FACTS (HINTS):
 {chr(10).join([f"- {hint}" for hint in trace.acmg_criteria_hints]) if trace.acmg_criteria_hints else "None provided."}
 
 ---
-TASK: 
-1. Review the ACMG guidelines and the variant data above.
-2. Provide a step-by-step reasoning trace for each criterion.
-3. Classify the variant (Pathogenic, Likely Pathogenic, VUS, Likely Benign, Benign).
-4. Return a JSON object with the final classification, triggered criteria codes, and reasoning.
+CRITICAL INSTRUCTIONS FOR CLASSIFICATION:
+1. First, check for PATHOGENIC criteria (PVS1, PS1-PS4, PM1-PM6, PP1-PP5).
+2. Then, check for BENIGN criteria (BA1, BS1-BS4, BP1-BP7) - DO NOT SKIP THIS STEP.
+3. BA1: If gnomAD allele frequency > 5% (AF > 0.05), this is standalone evidence for Benign.
+4. BS1: If gnomAD AF > expected for disease (typically > 1% for rare diseases), this is strong evidence for Benign.
+5. BP4: If in silico predictions (CADD, SIFT, PolyPhen) suggest no impact, this is supporting evidence for Benign.
+6. Only classify as VUS if NEITHER pathogenic nor benign criteria are met.
+7. Provide a step-by-step reasoning trace for EACH criterion checked (both pathogenic AND benign).
+8. Classify the variant (Pathogenic, Likely Pathogenic, VUS, Likely Benign, Benign).
+9. Return a JSON object with the final classification, triggered criteria codes, and reasoning.
+
+IMPORTANT: Many variants are benign due to high population frequency. Always check BA1 and BS1 before defaulting to VUS.
 """
         return prompt.strip()
 

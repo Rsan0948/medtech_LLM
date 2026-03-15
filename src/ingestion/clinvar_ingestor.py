@@ -18,8 +18,9 @@ TARGET_GENES = [
 ]
 
 NCBI_BASE = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
-BATCH_SIZE = 500
-RATE_LIMIT_DELAY = 0.34  # ~3 requests/sec per NCBI guidelines
+BATCH_SIZE = 50
+RATE_LIMIT_DELAY = 0.5  # ~2 requests/sec to be gentler on NCBI
+MAX_VARIANTS_PER_GENE = 500  # Limit for POC - focus on most recent variants
 
 REVIEW_STATUS_TO_STARS = {
     "practice guideline": 4,
@@ -59,13 +60,24 @@ class ClinVarIngestor:
         self.total_written = 0
         self.total_skipped = 0
 
-    def _get(self, url: str, params: Dict) -> Dict:
+    def _get(self, url: str, params: Dict, max_retries: int = 3) -> Dict:
         if self.api_key:
             params["api_key"] = self.api_key
-        resp = requests.get(url, params=params, timeout=30)
-        resp.raise_for_status()
-        time.sleep(RATE_LIMIT_DELAY)
-        return resp.json()
+        
+        for attempt in range(max_retries):
+            try:
+                resp = requests.get(url, params=params, timeout=60)
+                resp.raise_for_status()
+                time.sleep(RATE_LIMIT_DELAY)
+                return resp.json()
+            except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout, 
+                    requests.exceptions.ConnectionError) as e:
+                if attempt < max_retries - 1:
+                    wait_time = (attempt + 1) * 10  # 10s, 20s, 30s
+                    print(f"    Connection issue ({type(e).__name__}), retrying in {wait_time}s... (attempt {attempt + 1}/{max_retries})")
+                    time.sleep(wait_time)
+                else:
+                    raise
 
     def _search_gene(self, gene: str) -> List[str]:
         """Return all ClinVar variation IDs for germline submissions of a gene."""
@@ -88,6 +100,10 @@ class ClinVarIngestor:
             total = int(result.get("count", 0))
             retstart += len(batch)
             if retstart >= total or not batch:
+                break
+            if len(ids) >= MAX_VARIANTS_PER_GENE:
+                ids = ids[:MAX_VARIANTS_PER_GENE]
+                print(f"  {gene}: limited to {len(ids)} variants (MAX_VARIANTS_PER_GENE)")
                 break
 
         print(f"  {gene}: found {len(ids)} variants")
