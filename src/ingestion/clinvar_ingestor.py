@@ -1,21 +1,22 @@
-import json
-import time
-import sys
 import os
+import sys
+import time
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import cast
+
 import requests
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from schemas.variant_trace_v1 import (
-    VariantTrace, VariantIdentity, EvidenceProfile, VerifiedOutcome, ACMGClassification
+    ACMGClassification,
+    EvidenceProfile,
+    VariantIdentity,
+    VariantTrace,
+    VerifiedOutcome,
 )
 
 # Hereditary cancer gene panel — focused POC scope
-TARGET_GENES = [
-    "BRCA1", "BRCA2", "MLH1", "MSH2", "MSH6",
-    "PMS2", "PALB2", "ATM", "CHEK2", "TP53"
-]
+TARGET_GENES = ["BRCA1", "BRCA2", "MLH1", "MSH2", "MSH6", "PMS2", "PALB2", "ATM", "CHEK2", "TP53"]
 
 NCBI_BASE = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 BATCH_SIZE = 50
@@ -54,45 +55,55 @@ class ClinVarIngestor:
     Converts to VariantTrace JSONL for the ZDS pipeline.
     """
 
-    def __init__(self, output_path: str, api_key: Optional[str] = None):
+    def __init__(self, output_path: str, api_key: str | None = None):
         self.output_path = Path(output_path)
         self.api_key = api_key  # NCBI API key (optional, raises rate limit to 10 req/sec)
         self.total_written = 0
         self.total_skipped = 0
 
-    def _get(self, url: str, params: Dict, max_retries: int = 3) -> Dict:
+    def _get(self, url: str, params: dict, max_retries: int = 3) -> dict:
         if self.api_key:
             params["api_key"] = self.api_key
-        
+
         for attempt in range(max_retries):
             try:
                 resp = requests.get(url, params=params, timeout=60)
                 resp.raise_for_status()
                 time.sleep(RATE_LIMIT_DELAY)
-                return resp.json()
-            except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectTimeout, 
-                    requests.exceptions.ConnectionError) as e:
+                return cast(dict, resp.json())
+            except (
+                requests.exceptions.ReadTimeout,
+                requests.exceptions.ConnectTimeout,
+                requests.exceptions.ConnectionError,
+            ) as e:
                 if attempt < max_retries - 1:
                     wait_time = (attempt + 1) * 10  # 10s, 20s, 30s
-                    print(f"    Connection issue ({type(e).__name__}), retrying in {wait_time}s... (attempt {attempt + 1}/{max_retries})")
+                    print(
+                        f"    Connection issue ({type(e).__name__}), retrying in {wait_time}s... (attempt {attempt + 1}/{max_retries})"
+                    )
                     time.sleep(wait_time)
                 else:
                     raise
 
-    def _search_gene(self, gene: str) -> List[str]:
+        raise Exception(f"Failed to fetch {url} after {max_retries} attempts")
+
+    def _search_gene(self, gene: str) -> list[str]:
         """Return all ClinVar variation IDs for germline submissions of a gene."""
         ids = []
         retstart = 0
         query = f"{gene}[gene] AND germline[origin] AND single_gene[prop]"
 
         while True:
-            data = self._get(f"{NCBI_BASE}/esearch.fcgi", {
-                "db": "clinvar",
-                "term": query,
-                "retmax": BATCH_SIZE,
-                "retstart": retstart,
-                "retmode": "json",
-            })
+            data = self._get(
+                f"{NCBI_BASE}/esearch.fcgi",
+                {
+                    "db": "clinvar",
+                    "term": query,
+                    "retmax": BATCH_SIZE,
+                    "retstart": retstart,
+                    "retmode": "json",
+                },
+            )
             result = data.get("esearchresult", {})
             batch = result.get("idlist", [])
             ids.extend(batch)
@@ -109,43 +120,43 @@ class ClinVarIngestor:
         print(f"  {gene}: found {len(ids)} variants")
         return ids
 
-    def _fetch_summaries(self, ids: List[str]) -> List[Dict]:
+    def _fetch_summaries(self, ids: list[str]) -> list[dict]:
         """Fetch esummary records in batches of BATCH_SIZE."""
         summaries = []
         for i in range(0, len(ids), BATCH_SIZE):
-            batch = ids[i:i + BATCH_SIZE]
-            data = self._get(f"{NCBI_BASE}/esummary.fcgi", {
-                "db": "clinvar",
-                "id": ",".join(batch),
-                "retmode": "json",
-            })
+            batch = ids[i : i + BATCH_SIZE]
+            data = self._get(
+                f"{NCBI_BASE}/esummary.fcgi",
+                {
+                    "db": "clinvar",
+                    "id": ",".join(batch),
+                    "retmode": "json",
+                },
+            )
             result = data.get("result", {})
             for uid in result.get("uids", []):
                 summaries.append(result[uid])
         return summaries
 
-    def _parse_classification(self, summary: Dict) -> Optional[ACMGClassification]:
+    def _parse_classification(self, summary: dict) -> ACMGClassification | None:
         """Extract germline classification string and map to enum."""
         # Try germline_classification first (newer API), fall back to clinical_significance
-        raw = (
-            summary.get("germline_classification", {}).get("description", "")
-            or summary.get("clinical_significance", {}).get("description", "")
-        )
+        raw = summary.get("germline_classification", {}).get("description", "") or summary.get(
+            "clinical_significance", {}
+        ).get("description", "")
         return CLASSIFICATION_MAP.get(raw)
 
-    def _parse_review_status(self, summary: Dict) -> str:
+    def _parse_review_status(self, summary: dict) -> str:
         return (
             summary.get("germline_classification", {}).get("review_status", "")
             or summary.get("clinical_significance", {}).get("review_status", "")
             or "no classification provided"
         )
 
-    def _parse_hgvs(self, summary: Dict) -> tuple:
+    def _parse_hgvs(self, summary: dict) -> tuple:
         """Return (hgvs_c, hgvs_p) strings."""
         hgvs_c, hgvs_p = "", None
         for expr in (summary.get("variation_set") or [{}])[0].get("variation_hgvs", []):
-            assembly = expr.get("assembly_name", "")
-            mol_type = expr.get("mol_type", "")
             hgvs = expr.get("hgvs", "")
             if "c." in hgvs:
                 hgvs_c = hgvs
@@ -153,7 +164,7 @@ class ClinVarIngestor:
                 hgvs_p = hgvs
         return hgvs_c, hgvs_p
 
-    def _summary_to_trace(self, summary: Dict, gene: str) -> Optional[VariantTrace]:
+    def _summary_to_trace(self, summary: dict, gene: str) -> VariantTrace | None:
         classification = self._parse_classification(summary)
         if classification is None:
             self.total_skipped += 1
@@ -175,7 +186,9 @@ class ClinVarIngestor:
             hgvs_c = summary.get("title", "")
 
         # Variant type
-        var_type = (summary.get("variation_set") or [{}])[0].get("variant_type", "single nucleotide variant")
+        var_type = (summary.get("variation_set") or [{}])[0].get(
+            "variant_type", "single nucleotide variant"
+        )
 
         # gnomAD allele frequency (not directly in esummary — default to None)
         # CADD/SIFT/PolyPhen also not in esummary; these would require Ensembl VEP enrichment
@@ -211,7 +224,9 @@ class ClinVarIngestor:
             hints.append("Expert panel or practice guideline reviewed")
         if classification in (ACMGClassification.PATHOGENIC, ACMGClassification.LIKELY_PATHOGENIC):
             if submission_count > 5:
-                hints.append(f"PS4 candidate: {submission_count} independent submissions support pathogenicity")
+                hints.append(
+                    f"PS4 candidate: {submission_count} independent submissions support pathogenicity"
+                )
 
         return VariantTrace(
             trace_id=f"CV-{summary.get('uid', '')}",
@@ -229,7 +244,7 @@ class ClinVarIngestor:
 
         self.output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(self.output_path, 'w') as f_out:
+        with open(self.output_path, "w") as f_out:
             for gene in TARGET_GENES:
                 print(f"\nProcessing {gene}...")
                 ids = self._search_gene(gene)
@@ -240,7 +255,7 @@ class ClinVarIngestor:
                 for summary in summaries:
                     trace = self._summary_to_trace(summary, gene)
                     if trace is not None:
-                        f_out.write(trace.model_dump_json() + '\n')
+                        f_out.write(trace.model_dump_json() + "\n")
                         self.total_written += 1
 
         print("\n" + "=" * 50)

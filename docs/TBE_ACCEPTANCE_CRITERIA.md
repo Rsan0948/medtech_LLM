@@ -14,7 +14,7 @@
 
 ## 2. The Triadic Benchmarks
 
-| Metric | Baseline Floor (InterVar) | Teacher Ceiling (DeepSeek R1) | Student Target (Qwen 7B/14B) |
+| Metric | Baseline Floor (InterVar) | Teacher Ceiling (DeepSeek R1) | Student Target (Qwen3 8B/14B) |
 |--------|---------------------------|-------------------------------|------------------------------|
 | **Overall Accuracy** | ~60-65% (est.) | ~85-90% (est.) | **> Baseline Floor** |
 | **High-Conf Accuracy**| ~70% (est.) | ~95% (est.) | **> 80%** |

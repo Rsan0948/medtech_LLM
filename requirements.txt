@@ -1,3 +1,18 @@
+# Core dependencies
 pydantic>=2.0
-requests
-python-dotenv
+requests>=2.31.0
+python-dotenv>=1.0.0
+
+# Local inference (Apple Silicon)
+mlx>=0.18.0
+mlx-lm>=0.19.0
+
+# Development
+pytest>=8.0.0
+pytest-cov>=4.1.0
+black>=24.0.0
+ruff>=0.4.0
+mypy>=1.9.0
+
+# Demo
+streamlit>=1.32.0

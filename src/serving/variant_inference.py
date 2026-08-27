@@ -1,17 +1,18 @@
 import json
 import os
+import re
 import sys
-from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any, cast
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from mlx_lm import load, generate
-from schemas.variant_trace_v1 import VariantTrace
+from mlx_lm import generate, load
+
 from modeling.prompt_factory import PromptFactory
+from schemas.variant_trace_v1 import VariantTrace
 
 GUIDELINES_PATH = os.path.join(
-    os.path.dirname(__file__), '..', '..', 'docs', 'ACMG_GUIDELINES_V1.txt'
+    os.path.dirname(__file__), "..", "..", "docs", "ACMG_GUIDELINES_V1.txt"
 )
 MAX_TOKENS = 1024
 
@@ -23,18 +24,16 @@ class VariantInference:
     Genomic data never leaves the machine.
     """
 
-    def __init__(self, model_path: str, adapter_path: Optional[str] = None):
+    def __init__(self, model_path: str, adapter_path: str | None = None):
         self.model_path = model_path
         self.adapter_path = adapter_path
-        self.model, self.tokenizer = load(model_path, adapter_path=adapter_path)
-        self.prompt_factory = PromptFactory(
-            guidelines_path=os.path.abspath(GUIDELINES_PATH)
-        )
+        self.model, self.tokenizer = load(model_path, adapter_path=adapter_path)  # type: ignore[misc]
+        self.prompt_factory = PromptFactory(guidelines_path=os.path.abspath(GUIDELINES_PATH))
         print(f"Loaded local MedTech model: {model_path}")
         if adapter_path:
             print(f"Applied LoRA adapters: {adapter_path}")
 
-    def classify(self, variant_json: str) -> Dict[str, Any]:
+    def classify(self, variant_json: str) -> dict[str, Any]:
         """
         Takes a JSON string of variant fields and returns ACMG classification + reasoning.
 
@@ -42,7 +41,7 @@ class VariantInference:
             variant_json: JSON string conforming to VariantTrace schema (identity + evidence fields).
 
         Returns:
-            Dict with keys: predicted_classification, triggered_criteria,
+            Dict with keys: classification, triggered_criteria,
                             reasoning_trace, confidence, privacy_status.
         """
         # Parse and validate input
@@ -78,13 +77,14 @@ class VariantInference:
 
         # Parse JSON response
         try:
-            # Strip any markdown code fences if present
+            # Strip Qwen3 reasoning tags and any markdown code fences
             clean = raw_output.strip()
+            clean = re.sub(r"<think>.*?</think>", "", clean, flags=re.DOTALL).strip()
             if clean.startswith("```"):
                 clean = clean.split("```")[1]
                 if clean.startswith("json"):
                     clean = clean[4:]
-            result = json.loads(clean.strip())
+            result = cast(dict[str, Any], json.loads(clean.strip()))
         except json.JSONDecodeError:
             result = {
                 "classification": "Variant of Uncertain Significance",
@@ -99,7 +99,7 @@ class VariantInference:
 
 if __name__ == "__main__":
     engine = VariantInference(
-        model_path="Qwen/Qwen2.5-7B-Instruct",
+        model_path="mlx-community/Qwen3-8B-bf16",
         adapter_path="models/adapters/genomics_v1",
     )
     sample = {

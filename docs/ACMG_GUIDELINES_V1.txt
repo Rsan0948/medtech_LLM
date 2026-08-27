@@ -31,5 +31,5 @@ ZDS FORMATTING REQUIREMENT:
 Your final output MUST be a JSON-safe string with the following fields:
 - "reasoning_trace": Full step-by-step analysis.
 - "triggered_criteria": List of ACMG codes (e.g. ["PVS1", "PM2"]).
-- "predicted_classification": The final 5-tier label.
+- "classification": The final 5-tier label.
 - "confidence": Low, Medium, or High.

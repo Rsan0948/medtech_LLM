@@ -1,15 +1,14 @@
-import json
-from pathlib import Path
 from schemas.variant_trace_v1 import VariantTrace
+
 
 class PromptFactory:
     """
     ZDS-ID: TOOL-801 (RichSpec Prompting Strategy)
     Assembles a high-fidelity distillation prompt for the Teacher model.
     """
-    
+
     def __init__(self, guidelines_path: str):
-        with open(guidelines_path, 'r') as f:
+        with open(guidelines_path) as f:
             self.guidelines = f.read()
 
     def create_prompt(self, trace: VariantTrace) -> str:
@@ -18,7 +17,7 @@ class PromptFactory:
         """
         identity = trace.identity
         evidence = trace.evidence
-        
+
         prompt = f"""
 {self.guidelines}
 
@@ -57,6 +56,7 @@ CRITICAL INSTRUCTIONS FOR CLASSIFICATION:
 IMPORTANT: Many variants are benign due to high population frequency. Always check BA1 and BS1 before defaulting to VUS.
 """
         return prompt.strip()
+
 
 if __name__ == "__main__":
     # Test call

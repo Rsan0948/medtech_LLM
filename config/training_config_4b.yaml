@@ -1,6 +1,6 @@
 # ZDS v1.0 Training Configuration (MedTech Optimized)
 # Aggressive config for Apple Silicon with 64 GB unified memory.
-# Model Target: Qwen3-8B-Instruct (local path)
+# Model Target: Qwen3-4B-Instruct (local path) — edge/mobile variant
 
 # Dataset Paths
 data: "data/app/training_data/" # Should contain train.jsonl and valid.jsonl
@@ -9,8 +9,8 @@ data: "data/app/training_data/" # Should contain train.jsonl and valid.jsonl
 train: true
 
 # Model Settings
-model: "mlx-community/Qwen3-8B-bf16"
-adapter_path: "models/adapters/genomics_v2"
+model: "mlx-community/Qwen3-4B-bf16"
+adapter_path: "models/adapters/genomics_v2_4b"
 
 # LoRA Hyperparameters
 fine_tune_type: "lora"
@@ -26,8 +26,8 @@ lora_parameters:
 # effective batch 16, ~45 optimizer steps per epoch. 1000 iterations is a MAXIMUM;
 # the best checkpoint is selected by validation loss after the run (early stopping).
 iters: 1000
-batch_size: 8
-gradient_accumulation_steps: 2 # Effective batch size 16
+batch_size: 4
+gradient_accumulation_steps: 4 # Effective batch size 16; smaller bursts avoid Metal 'Impacting Interactivity' kills while the machine is in use
 learning_rate: 2.0e-4
 
 # Learning-rate schedule: cosine decay from 2e-4 -> 1e-6 over 1000 steps with 100 warmup steps

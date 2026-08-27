@@ -8,8 +8,9 @@ This enables proper BA1/BS1 benign criteria classification.
 
 import json
 import time
+from typing import Any, cast
+
 import requests
-from typing import Dict, Any, Optional
 
 GNOMAD_API_URL = "https://gnomad.broadinstitute.org/api"
 
@@ -48,42 +49,41 @@ class GnomADEnricher:
     """
     Enriches variant traces with gnomAD allele frequency data.
     """
-    
+
     def __init__(self, rate_limit_delay: float = 0.5):
         self.rate_limit_delay = rate_limit_delay
-        self.cache = {}  # Simple cache to avoid duplicate queries
-    
-    def _get_gnomad_variant(self, chrom: str, pos: int, ref: str = "N", alt: str = "N") -> Optional[Dict]:
+        self.cache: dict[str, Any | None] = {}  # Simple cache to avoid duplicate queries
+
+    def _get_gnomad_variant(
+        self, chrom: str, pos: int, ref: str = "N", alt: str = "N"
+    ) -> dict | None:
         """
         Query gnomAD for variant data.
         Format: chrom-pos-ref-alt (e.g., 17-43106477-A-AT)
         """
         # Build variant ID
         variant_id = f"{chrom}-{pos}-{ref}-{alt}"
-        
+
         if variant_id in self.cache:
             return self.cache[variant_id]
-        
+
         try:
             # Try gnomAD v4 (genomes)
-            payload = {
+            payload: dict[str, Any] = {
                 "query": VARIANT_QUERY,
-                "variables": {
-                    "variantId": variant_id,
-                    "datasetId": "gnomad_r4"
-                }
+                "variables": {"variantId": variant_id, "datasetId": "gnomad_r4"},
             }
-            
+
             resp = requests.post(
                 GNOMAD_API_URL,
                 json=payload,
                 headers={"Content-Type": "application/json"},
-                timeout=30
+                timeout=30,
             )
-            
+
             if resp.status_code == 200:
-                data = resp.json()
-                variant_data = data.get("data", {}).get("variant")
+                data = cast(dict[str, Any], resp.json())
+                variant_data = cast(dict[str, Any] | None, data.get("data", {}).get("variant"))
                 self.cache[variant_id] = variant_data
                 time.sleep(self.rate_limit_delay)
                 return variant_data
@@ -94,43 +94,43 @@ class GnomADEnricher:
                     GNOMAD_API_URL,
                     json=payload,
                     headers={"Content-Type": "application/json"},
-                    timeout=30
+                    timeout=30,
                 )
                 if resp.status_code == 200:
-                    data = resp.json()
-                    variant_data = data.get("data", {}).get("variant")
+                    data = cast(dict[str, Any], resp.json())
+                    variant_data = cast(dict[str, Any] | None, data.get("data", {}).get("variant"))
                     self.cache[variant_id] = variant_data
                     time.sleep(self.rate_limit_delay)
                     return variant_data
-                
+
         except Exception as e:
             print(f"    gnomAD query failed for {variant_id}: {e}")
-        
+
         time.sleep(self.rate_limit_delay)
         return None
-    
-    def enrich_variant(self, variant_trace: Dict) -> Dict:
+
+    def enrich_variant(self, variant_trace: dict) -> dict:
         """
         Enrich a variant trace with gnomAD data.
         Returns updated trace.
         """
         identity = variant_trace.get("identity", {})
         evidence = variant_trace.get("evidence", {})
-        
+
         chrom = identity.get("chromosome")
         pos = identity.get("position")
-        
+
         if not chrom or not pos:
             return variant_trace
-        
+
         # Query gnomAD
         gnomad_data = self._get_gnomad_variant(str(chrom), int(pos))
-        
+
         if gnomad_data:
             # Extract allele frequencies
             genome_af = gnomad_data.get("genome", {}).get("af")
             exome_af = gnomad_data.get("exome", {}).get("af")
-            
+
             # Use the higher AF (more data)
             if genome_af and exome_af:
                 af = max(genome_af, exome_af)
@@ -140,12 +140,12 @@ class GnomADEnricher:
                 af = exome_af
             else:
                 af = None
-            
+
             # Update evidence
             if af is not None:
                 evidence["gnomad_af"] = af
                 evidence["gnomad_filter"] = "PASS" if af < 0.01 else "COMMON"
-            
+
             # Add in silico predictors if available
             predictors = gnomad_data.get("in_silico_predictors", {})
             if predictors:
@@ -153,29 +153,29 @@ class GnomADEnricher:
                     evidence["cadd_score"] = predictors["cadd"]
                 if predictors.get("splice_ai") and not evidence.get("splice_ai_score"):
                     evidence["splice_ai_score"] = predictors["splice_ai"]
-        
+
         variant_trace["evidence"] = evidence
         return variant_trace
-    
+
     def enrich_batch(self, variant_traces: list) -> list:
         """Enrich a batch of variant traces."""
         enriched = []
         total = len(variant_traces)
-        
+
         print(f"Enriching {total} variants with gnomAD data...")
-        
+
         for i, trace in enumerate(variant_traces):
             enriched_trace = self.enrich_variant(trace)
             enriched.append(enriched_trace)
-            
+
             if (i + 1) % 10 == 0:
                 with_af = sum(1 for t in enriched if t.get("evidence", {}).get("gnomad_af"))
                 print(f"  [{i+1}/{total}] {with_af} have gnomAD AF")
-        
+
         # Final stats
         with_af = sum(1 for t in enriched if t.get("evidence", {}).get("gnomad_af"))
         print(f"\nEnrichment complete: {with_af}/{total} ({100*with_af/total:.1f}%) have gnomAD AF")
-        
+
         return enriched
 
 
@@ -183,31 +183,30 @@ def main():
     """
     Standalone enrichment of existing variant traces.
     """
-    import sys
-    
+
     # Use the filtered 1K variants that match our prompts
     input_path = "data/processed/variant_traces_to_enrich.jsonl"
     output_path = "data/processed/variant_traces_enriched_1k.jsonl"
-    
+
     print("=" * 60)
     print("gnomAD Enrichment Tool")
     print("=" * 60)
-    
+
     # Load variants
-    with open(input_path, 'r') as f:
-        variants = [json.loads(l) for l in f if l.strip()]
-    
+    with open(input_path) as f:
+        variants = [json.loads(line) for line in f if line.strip()]
+
     print(f"Loaded {len(variants)} variants from {input_path}")
-    
+
     # Enrich
     enricher = GnomADEnricher(rate_limit_delay=0.5)
     enriched = enricher.enrich_batch(variants)
-    
+
     # Save
-    with open(output_path, 'w') as f:
+    with open(output_path, "w") as f:
         for v in enriched:
-            f.write(json.dumps(v) + '\n')
-    
+            f.write(json.dumps(v) + "\n")
+
     print(f"\nSaved enriched variants to {output_path}")
 
 

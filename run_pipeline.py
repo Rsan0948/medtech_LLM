@@ -21,9 +21,9 @@ import sys
 from pathlib import Path
 
 # Ensure src is on the path for all stages
-SRC_DIR = os.path.join(os.path.dirname(__file__), 'src')
+SRC_DIR = os.path.join(os.path.dirname(__file__), "src")
 sys.path.insert(0, SRC_DIR)
-SCRIPTS_DIR = os.path.join(os.path.dirname(__file__), 'scripts')
+SCRIPTS_DIR = os.path.join(os.path.dirname(__file__), "scripts")
 sys.path.insert(0, SCRIPTS_DIR)
 
 
@@ -31,6 +31,7 @@ def stage_ingest():
     print("\n[Stage 1] ClinVar Ingestion")
     print("-" * 40)
     from ingestion.clinvar_ingestor import ClinVarIngestor
+
     ingestor = ClinVarIngestor(output_path="data/processed/variant_traces_raw.jsonl")
     ingestor.run()
 
@@ -39,6 +40,7 @@ def stage_filter():
     print("\n[Stage 2] Consensus Quality Filter (CQF)")
     print("-" * 40)
     from processing.consensus_filter import ConsensusFilter
+
     gate = ConsensusFilter(
         input_path="data/processed/variant_traces_raw.jsonl",
         output_path="data/processed/variant_traces_cqf_tier1.jsonl",
@@ -51,9 +53,9 @@ def stage_prompts():
     print("-" * 40)
     # Reuse the existing generate_r1_prompts script
     import importlib.util
+
     spec = importlib.util.spec_from_file_location(
-        "generate_r1_prompts",
-        os.path.join(SCRIPTS_DIR, "generate_r1_prompts.py")
+        "generate_r1_prompts", os.path.join(SCRIPTS_DIR, "generate_r1_prompts.py")
     )
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -64,6 +66,7 @@ def stage_teacher():
     print("\n[Stage 4] R1 Teacher Inference (DeepSeek API)")
     print("-" * 40)
     from modeling.r1_teacher import R1Teacher
+
     teacher = R1Teacher(
         prompts_path="data/app/teacher_prompts_1k.jsonl",
         output_path="data/app/teacher_responses.jsonl",
@@ -76,6 +79,7 @@ def stage_format():
     print("\n[Stage 5] Training Data Formatter")
     print("-" * 40)
     from modeling.training_data_formatter import TrainingDataFormatter
+
     formatter = TrainingDataFormatter(
         responses_path="data/app/teacher_responses.jsonl",
         output_dir="data/app/training_data",
@@ -86,7 +90,7 @@ def stage_format():
 def stage_train():
     print("\n[Stage 6] MLX LoRA Fine-Tuning")
     print("-" * 40)
-    train_script = os.path.join(os.path.dirname(__file__), 'src', 'modeling', 'train_mlx.sh')
+    train_script = os.path.join(os.path.dirname(__file__), "src", "modeling", "train_mlx.sh")
     result = subprocess.run(["bash", train_script], cwd=os.path.dirname(os.path.abspath(__file__)))
     if result.returncode != 0:
         print(f"ERROR: Training script exited with code {result.returncode}")
@@ -104,18 +108,19 @@ def stage_evaluate():
         print("student_label, student_confidence.")
         return
     from evaluation.tbe_metrics import TBEMetrics
+
     engine = TBEMetrics(results_path=results_path)
     engine.process_test_set()
     engine.report()
 
 
 STAGES = {
-    "ingest":   stage_ingest,
-    "filter":   stage_filter,
-    "prompts":  stage_prompts,
-    "teacher":  stage_teacher,
-    "format":   stage_format,
-    "train":    stage_train,
+    "ingest": stage_ingest,
+    "filter": stage_filter,
+    "prompts": stage_prompts,
+    "teacher": stage_teacher,
+    "format": stage_format,
+    "train": stage_train,
     "evaluate": stage_evaluate,
 }
 
@@ -127,14 +132,8 @@ def main():
         description="ZDS MedTech Genomic Variant Classification Pipeline"
     )
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument(
-        "--all", action="store_true",
-        help="Run the full pipeline (stages 1-7)"
-    )
-    group.add_argument(
-        "--stage", choices=list(STAGES.keys()),
-        help="Run a single pipeline stage"
-    )
+    group.add_argument("--all", action="store_true", help="Run the full pipeline (stages 1-7)")
+    group.add_argument("--stage", choices=list(STAGES.keys()), help="Run a single pipeline stage")
     args = parser.parse_args()
 
     print("=" * 50)

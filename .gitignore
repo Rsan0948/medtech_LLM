@@ -28,3 +28,20 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Testing / coverage
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+
+# Tool caches
+.mypy_cache/
+.ruff_cache/
+
+# Personal notes (not for publication)
+LLM Training/
+
+# Virtual environments
+.venv/
+venv/
