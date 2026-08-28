@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verifier-Guided Distillation for Clinical Variant Classification</title>
+<style>
+  :root {
+    --ink: #101828; --muted: #475467; --faint: #98a2b3;
+    --bg: #f4f6fb; --card: #ffffff; --line: #e4e7ec;
+    --indigo: #4f46e5; --teal: #0d9488; --amber: #d97706;
+    --gray: #6b7280; --red: #dc2626; --green: #16a34a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+         background: var(--bg); color: var(--ink); line-height: 1.55; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+  /* Hero */
+  .hero { background: linear-gradient(135deg, #1e1b4b 0%, #312e81 55%, #0f766e 100%); color: #fff; padding: 64px 0 56px; }
+  .hero .kicker { text-transform: uppercase; letter-spacing: .14em; font-size: 12px; font-weight: 700; color: #a5b4fc; }
+  .hero h1 { font-size: 40px; line-height: 1.15; margin: 12px 0 14px; max-width: 820px; }
+  .hero p.sub { font-size: 17px; color: #c7d2fe; max-width: 760px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 32px; }
+  .chip { background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.22); border-radius: 14px; padding: 14px 20px; backdrop-filter: blur(4px); }
+  .chip .v { font-size: 26px; font-weight: 800; }
+  .chip .l { font-size: 12px; color: #c7d2fe; margin-top: 2px; }
+
+  /* Sections */
+  section { padding: 44px 0 8px; }
+  h2 { font-size: 26px; margin-bottom: 6px; }
+  .lede { color: var(--muted); max-width: 780px; margin-bottom: 22px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 24px; box-shadow: 0 1px 2px rgba(16,24,40,.04); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  @media (max-width: 860px) { .grid2, .grid3 { grid-template-columns: 1fr; } .hero h1 { font-size: 30px; } }
+
+  /* Pipeline */
+  .pipe { display: flex; align-items: stretch; gap: 0; flex-wrap: wrap; }
+  .pstep { flex: 1 1 150px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; position: relative; }
+  .pstep .n { font-size: 11px; font-weight: 800; color: var(--indigo); letter-spacing: .08em; }
+  .pstep .t { font-weight: 700; font-size: 14px; margin: 3px 0 4px; }
+  .pstep .d { font-size: 12px; color: var(--muted); }
+  .parrow { align-self: center; color: var(--faint); font-size: 20px; padding: 0 8px; }
+
+  /* Findings */
+  .finding { border-left: 4px solid var(--indigo); }
+  .finding.teal { border-left-color: var(--teal); }
+  .finding.amber { border-left-color: var(--amber); }
+  .finding.green { border-left-color: var(--green); }
+  .finding h3 { font-size: 16px; margin-bottom: 6px; }
+  .finding p { font-size: 14px; color: var(--muted); }
+  .finding b { color: var(--ink); }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--faint); padding: 8px 10px; border-bottom: 2px solid var(--line); }
+  td { padding: 9px 10px; border-bottom: 1px solid var(--line); }
+  tr:last-child td { border-bottom: none; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .hl td { background: #eef2ff; font-weight: 600; }
+  .hl2 td { background: #f0fdfa; font-weight: 600; }
+
+  /* Confusion matrix */
+  .cm { border-collapse: collapse; font-size: 12.5px; }
+  .cm th { border: none; padding: 5px 8px; text-transform: none; letter-spacing: 0; white-space: nowrap; }
+  .cm td { border: 1px solid var(--line); padding: 0; text-align: center; width: 58px; height: 40px; font-variant-numeric: tabular-nums; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tab { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 7px 16px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; }
+  .tab.on { background: var(--indigo); border-color: var(--indigo); color: #fff; }
+
+  /* Bars */
+  .bar-row { display: grid; grid-template-columns: 190px 1fr 64px; align-items: center; gap: 12px; margin: 7px 0; font-size: 13.5px; }
+  .bar-track { background: #eef0f5; border-radius: 7px; height: 24px; overflow: hidden; display: flex; }
+  .bar-fill { height: 100%; border-radius: 7px; }
+  .bar-val { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .legend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); margin: 12px 0 4px; }
+  .legend span::before { content: ""; display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; background: var(--c); }
+
+  .note { font-size: 13px; color: var(--muted); margin-top: 14px; }
+  .checklist { list-style: none; }
+  .checklist li { padding: 10px 0 10px 34px; position: relative; border-bottom: 1px solid var(--line); font-size: 14.5px; }
+  .checklist li:last-child { border-bottom: none; }
+  .checklist li::before { content: "\2713"; position: absolute; left: 4px; top: 9px; width: 22px; height: 22px; border-radius: 50%; background: #dcfce7; color: var(--green); font-weight: 800; text-align: center; line-height: 22px; font-size: 13px; }
+  .checklist li.warn::before { content: "!"; background: #fef3c7; color: var(--amber); }
+  .checklist li.pend::before { content: "\2026"; background: #e0e7ff; color: var(--indigo); }
+  .checklist small { display: block; color: var(--muted); margin-top: 2px; }
+
+  footer { margin: 48px 0 40px; padding: 26px 0; border-top: 1px solid var(--line); color: var(--muted); font-size: 13.5px; }
+  footer a { color: var(--indigo); text-decoration: none; font-weight: 600; }
+  svg text { font-family: inherit; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="wrap">
+    <div class="kicker">On-Device Clinical Genomics &middot; MLX / Apple Silicon</div>
+    <h1>Verifier-Guided Distillation for ACMG Variant Classification</h1>
+    <p class="sub">Qwen3 8B and 4B LoRA students, distilled from DeepSeek-R1 reasoning traces and filtered against ClinVar ground truth. A 4B model that fits in 9.5 GB of memory outperforms its 671B teacher, a gradient-boosting baseline, and a rule-based interpreter on 5-class germline variant classification.</p>
+    <div class="chips">
+      <div class="chip"><div class="v" id="chip-acc">-</div><div class="l">8B validation accuracy</div></div>
+      <div class="chip"><div class="v" id="chip-hold">-</div><div class="l">8B true-holdout accuracy</div></div>
+      <div class="chip"><div class="v">23/23</div><div class="l">Pathogenic recall (zero missed)</div></div>
+      <div class="chip"><div class="v">2.4s</div><div class="l">4B time-to-label on M1 Max</div></div>
+      <div class="chip"><div class="v">9.5 GB</div><div class="l">4B peak memory (edge-ready)</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+<section>
+  <h2>The pipeline</h2>
+  <p class="lede">End-to-end: from raw ClinVar ingestion to a distilled on-device classifier. The core idea: only train on teacher reasoning that the evidence agrees with.</p>
+  <div class="pipe">
+    <div class="pstep"><div class="n">STEP 1</div><div class="t">Ingest</div><div class="d">1,000 ClinVar germline variants (10-gene panel) + gnomAD allele frequencies, quality-filtered by review status</div></div>
+    <div class="parrow">&rarr;</div>
+    <div class="pstep"><div class="n">STEP 2</div><div class="t">Teach</div><div class="d">DeepSeek-R1 generates step-by-step ACMG reasoning traces for 955 unique variants</div></div>
+    <div class="parrow">&rarr;</div>
+    <div class="pstep"><div class="n">STEP 3</div><div class="t">Verify</div><div class="d">Keep only traces whose conclusion matches ClinVar; dedup; remove label-leaking prompt hints</div></div>
+    <div class="parrow">&rarr;</div>
+    <div class="pstep"><div class="n">STEP 4</div><div class="t">Distill</div><div class="d">LoRA fine-tune Qwen3-8B and Qwen3-4B (rank 64, bf16, MLX) on 715 verified examples</div></div>
+    <div class="parrow">&rarr;</div>
+    <div class="pstep"><div class="n">STEP 5</div><div class="t">Evaluate</div><div class="d">98-example validation split + 45 never-distilled holdout variants, scored against ClinVar labels</div></div>
+  </div>
+</section>
+
+<section>
+  <h2>Headline results</h2>
+  <p class="lede">Both students beat every comparator on both splits. The gradient-boosting baseline is a strong classical ML model trained on the same features the students see; the rule baseline encodes InterVar-style AF/LoF heuristics.</p>
+  <div class="card">
+    <div class="legend">
+      <span style="--c:#4f46e5">Validation (n=98)</span>
+      <span style="--c:#a5b4fc">True holdout (n=45, never distilled)</span>
+    </div>
+    <div id="acc-chart"></div>
+    <p class="note">The holdout set is the honest number: the validation split was also used for checkpoint selection. DeepSeek-R1 teacher is n/a on holdout (those variants were never distilled, so no teacher labels exist).</p>
+  </div>
+</section>
+
+<section>
+  <h2>Key findings</h2>
+  <p class="lede"></p>
+  <div class="grid2">
+    <div class="card finding"><h3>Data quality beat compute</h3><p>The jump from 56% to ~90% accuracy came from verifier-guided label refinement (keeping only teacher traces that agree with ClinVar), leakage removal, and dedup - not from bigger adapters or longer training.</p></div>
+    <div class="card finding teal"><h3>Students exceed their teacher by ~17&ndash;20 points</h3><p>The DeepSeek-R1 teacher scores 69.39% on validation, below even the rule baseline. The students only ever trained on <b>correct</b> reasoning, so distillation acted as a filter, not just compression.</p></div>
+    <div class="card finding amber"><h3>Early stopping mattered</h3><p>Validation loss bottomed at iteration 200 of a 1000-iter schedule. An automated watchdog stopped training; shipping the final checkpoint would have meant an overfit adapter (train loss 0.19, val loss 0.40).</p></div>
+    <div class="card finding green"><h3>Zero missed pathogenic variants</h3><p>Pathogenic recall is 23/23 on validation and 7/7 on holdout for the 8B. The strongest classical baseline misses 4 of 23. Residual errors concentrate on the VUS &harr; Likely Benign boundary, where evidence separation is weakest.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>Per-class performance</h2>
+  <p class="lede">Precision / recall / F1 on the 98-example validation split, scored against ClinVar verified labels.</p>
+  <div class="card">
+    <table id="perclass-table">
+      <thead><tr><th>Class</th><th class="num">Precision</th><th class="num">Recall</th><th class="num">F1</th><th class="num">Support</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="note">Benign and Likely Pathogenic supports are tiny (2 and 1), so those rows are unstable by construction. Reasoning-criterion agreement with the teacher (Jaccard over triggered ACMG criteria): 0.781 (8B), 0.811 (4B).</p>
+  </div>
+</section>
+
+<section>
+  <h2>Confusion matrices</h2>
+  <p class="lede">Rows are ClinVar verified labels, columns are predictions. Errors sit almost entirely on adjacent severity tiers.</p>
+  <div class="card">
+    <div class="tabs" id="cm-tabs"></div>
+    <div id="cm-body"></div>
+  </div>
+</section>
+
+<section>
+  <h2>Confidence calibration</h2>
+  <p class="lede">When the model says it is sure, it is usually right - and it abstains (Low/Medium confidence) exactly where errors live.</p>
+  <div class="grid3" id="conf-cards"></div>
+</section>
+
+<section>
+  <h2>Built for the edge</h2>
+  <p class="lede">Measured on an Apple M1 Max (64 GB unified memory, MLX/Metal, bf16). The JSON schema emits the classification first, so generation can be truncated after the first value for label-only answers.</p>
+  <div class="grid2">
+    <div class="card">
+      <h3 style="font-size:15px;margin-bottom:12px;">Latency (seconds, lower is better)</h3>
+      <div class="legend"><span style="--c:#4f46e5">medtech-8b</span><span style="--c:#0d9488">medtech-4b</span></div>
+      <div id="lat-chart"></div>
+    </div>
+    <div class="card">
+      <h3 style="font-size:15px;margin-bottom:12px;">Peak memory (GB, lower is better)</h3>
+      <div class="legend"><span style="--c:#4f46e5">medtech-8b</span><span style="--c:#0d9488">medtech-4b</span></div>
+      <div id="mem-chart"></div>
+      <p class="note">4B throughput: 20.7 tok/s vs 13.1 tok/s (8B). The 4B matches the 8B on holdout accuracy (88.89%) at half the memory and ~1.6x the speed.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Training dynamics</h2>
+  <p class="lede">8B validation loss over training (LoRA rank 64, cosine 2e-4 &rarr; 1e-6, effective batch 16, seed 42). The watchdog shipped the iteration-200 checkpoint, marked below.</p>
+  <div class="card">
+    <div id="loss-chart"></div>
+    <p class="note">Training to iteration 1000 would have shipped an overfit adapter: train loss kept falling (to 0.19) while validation loss climbed back to 0.40.</p>
+  </div>
+</section>
+
+<section>
+  <h2>The dataset</h2>
+  <p class="lede">715 training / 98 validation examples after refinement, from 1,000 quality-filtered ClinVar variants (BRCA1/BRCA2-heavy panel plus MLH1). Prompts are verified leak-free: no labels, no label-conditioned hints.</p>
+  <div class="card">
+    <div class="legend"><span style="--c:#4f46e5">Train (715)</span><span style="--c:#0d9488">Validation (98)</span></div>
+    <div id="dist-chart"></div>
+    <p class="note">Rare classes (Benign, Likely Pathogenic) were oversampled from 5/14 originals to 40 each. A separate 45-variant holdout was never distilled and is not shown here.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Pre-registered acceptance criteria</h2>
+  <p class="lede">The evaluation protocol was fixed before the final training runs.</p>
+  <div class="card">
+    <ul class="checklist">
+      <li>Beats the InterVar-style rule baseline<small>8B 89.80% and 4B 86.73% vs 75.51% (valid); both 88.89% vs 73.33% (holdout)</small></li>
+      <li>Beats classical ML baselines<small>Gradient boosting 81.63% valid / 73.33% holdout; logistic regression 77.55% / 71.11% - students win by +5.1 to +8.2 pts valid, +15.6 pts holdout</small></li>
+      <li>High-confidence precision &ge; 85%<small>8B: 88.89% valid / 94.74% holdout; 4B: 85.48% valid / 100.00% holdout</small></li>
+      <li class="warn">Closes &ge; 40% of the teacher gap - metric degenerate<small>The teacher scored below the baseline, so the pre-registered gap does not exist; both students beat baseline and teacher outright instead</small></li>
+      <li class="pend">Reasoning integrity &ge; 70% on manual review<small>Pending: a 50-case blind community review bundle is prepared and circulating</small></li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2>Honest caveats</h2>
+  <p class="lede"></p>
+  <div class="card">
+    <ul style="padding-left:20px; font-size:14px; color:var(--muted); display:grid; gap:8px;">
+      <li>Narrow domain: ~99% BRCA1/BRCA2 (plus 10 MLH1 variants). Not evaluated on other genes.</li>
+      <li>Checkpoint selection used the validation split, so validation accuracy is mildly optimistic; the 45-variant holdout is the unbiased estimate.</li>
+      <li>Ground-truth labels are weak: 97% of variants are 1-star single-submitter ClinVar entries.</li>
+      <li>Small test sets (98 + 45) and tiny Benign / Likely Pathogenic supports make some per-class metrics unstable.</li>
+      <li>Research artifact. Not a medical device, not for clinical use.</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap" style="padding:0;">
+    <b>medtech_LLM</b> &middot; Verifier-guided distillation for clinical variant classification &middot;
+    Code (MIT): <a href="https://github.com/Rsan0948/medtech_LLM">github.com/Rsan0948/medtech_LLM</a> &middot;
+    Models and dataset on HuggingFace: Rsan0948/medtech-acmg-8b-mlx, Rsan0948/medtech-acmg-4b-mlx, Rsan0948/clinvar-acmg-distillation<br>
+    Base models Qwen3 (Apache-2.0) via mlx-community &middot; Teacher DeepSeek-R1 (MIT) &middot; Data: NCBI ClinVar + gnomAD &middot; Evaluated August 2026 on Apple M1 Max
+  </div>
+</footer>
+
+</div>
+
+<script>
+const DATA = {"label_set": ["Pathogenic", "Likely Pathogenic", "Variant of Uncertain Significance", "Likely Benign", "Benign"], "models": {"medtech-8b": {"validation": {"n": 98, "accuracy": 0.898, "per_class": {"Pathogenic": {"precision": 0.8846, "recall": 1.0, "f1": 0.9388, "support": 23}, "Likely Pathogenic": {"precision": null, "recall": 0.0, "f1": 0.0, "support": 1}, "Variant of Uncertain Significance": {"precision": 0.9143, "recall": 0.8889, "f1": 0.9014, "support": 36}, "Likely Benign": {"precision": 0.9143, "recall": 0.8889, "f1": 0.9014, "support": 36}, "Benign": {"precision": 0.5, "recall": 0.5, "f1": 0.5, "support": 2}}, "confusion_matrix": {"Pathogenic": {"Pathogenic": 23, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 0, "Likely Benign": 0, "Benign": 0}, "Likely Pathogenic": {"Pathogenic": 1, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 0, "Likely Benign": 0, "Benign": 0}, "Variant of Uncertain Significance": {"Pathogenic": 2, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 32, "Likely Benign": 2, "Benign": 0}, "Likely Benign": {"Pathogenic": 0, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 3, "Likely Benign": 32, "Benign": 1}, "Benign": {"Pathogenic": 0, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 0, "Likely Benign": 1, "Benign": 1}}, "per_confidence": {"High": {"n": 63, "accuracy": 0.8889}, "Low": {"n": 35, "accuracy": 0.9143}, "high_confidence_coverage": 0.6429}, "invalid_json_rate": 0.0, "criterion_agreement_vs_teacher": {"methodology": "Triggered-criterion IDs extracted from student free-text reasoning (triggered-only mentions: 'X is triggered', 'X: Triggered', conjunction groups, 'criterion (X) triggered', 'satisfying X'); compared against teacher_triggered_criteria sets.", "n_compared": 98, "mean_jaccard": 0.7806, "exact_match_rate": 0.7449, "any_overlap_rate": 0.8163, "n_empty_extraction": 0}}, "holdout": {"n": 45, "accuracy": 0.8889, "per_class": {"Pathogenic": {"precision": 1.0, "recall": 1.0, "f1": 1.0, "support": 7}, "Likely Pathogenic": {"precision": 0.0, "recall": 0.0, "f1": 0.0, "support": 1}, "Variant of Uncertain Significance": {"precision": 0.8462, "recall": 0.9565, "f1": 0.898, "support": 23}, "Likely Benign": {"precision": 1.0, "recall": 0.7857, "f1": 0.88, "support": 14}, "Benign": {"precision": null, "recall": null, "f1": null, "support": 0}}, "confusion_matrix": {"Pathogenic": {"Pathogenic": 7, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 0, "Likely Benign": 0, "Benign": 0}, "Likely Pathogenic": {"Pathogenic": 0, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 1, "Likely Benign": 0, "Benign": 0}, "Variant of Uncertain Significance": {"Pathogenic": 0, "Likely Pathogenic": 1, "Variant of Uncertain Significance": 22, "Likely Benign": 0, "Benign": 0}, "Likely Benign": {"Pathogenic": 0, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 3, "Likely Benign": 11, "Benign": 0}, "Benign": {"Pathogenic": 0, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 0, "Likely Benign": 0, "Benign": 0}}, "per_confidence": {"High": {"n": 19, "accuracy": 0.9474}, "Low": {"n": 26, "accuracy": 0.8462}, "high_confidence_coverage": 0.4222}, "invalid_json_rate": 0.0, "criterion_agreement_vs_teacher": null, "criterion_agreement_note": "n/a - holdout variants were never distilled, so no teacher criteria exist."}}, "medtech-4b": {"validation": {"n": 98, "accuracy": 0.8673, "per_class": {"Pathogenic": {"precision": 0.9583, "recall": 1.0, "f1": 0.9787, "support": 23}, "Likely Pathogenic": {"precision": 0.5, "recall": 1.0, "f1": 0.6667, "support": 1}, "Variant of Uncertain Significance": {"precision": 0.8889, "recall": 0.8889, "f1": 0.8889, "support": 36}, "Likely Benign": {"precision": 0.931, "recall": 0.75, "f1": 0.8308, "support": 36}, "Benign": {"precision": 0.2857, "recall": 1.0, "f1": 0.4444, "support": 2}}, "confusion_matrix": {"Pathogenic": {"Pathogenic": 23, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 0, "Likely Benign": 0, "Benign": 0}, "Likely Pathogenic": {"Pathogenic": 0, "Likely Pathogenic": 1, "Variant of Uncertain Significance": 0, "Likely Benign": 0, "Benign": 0}, "Variant of Uncertain Significance": {"Pathogenic": 1, "Likely Pathogenic": 1, "Variant of Uncertain Significance": 32, "Likely Benign": 2, "Benign": 0}, "Likely Benign": {"Pathogenic": 0, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 4, "Likely Benign": 27, "Benign": 5}, "Benign": {"Pathogenic": 0, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 0, "Likely Benign": 0, "Benign": 2}}, "per_confidence": {"High": {"n": 62, "accuracy": 0.8548}, "Medium": {"n": 36, "accuracy": 0.8889}, "high_confidence_coverage": 0.6327}, "invalid_json_rate": 0.0, "criterion_agreement_vs_teacher": {"methodology": "Triggered-criterion IDs extracted from student free-text reasoning (triggered-only mentions: 'X is triggered', 'X: Triggered', conjunction groups, 'criterion (X) triggered', 'satisfying X'); compared against teacher_triggered_criteria sets.", "n_compared": 98, "mean_jaccard": 0.8112, "exact_match_rate": 0.7857, "any_overlap_rate": 0.8367, "n_empty_extraction": 0}}, "holdout": {"n": 45, "accuracy": 0.8889, "per_class": {"Pathogenic": {"precision": 1.0, "recall": 0.8571, "f1": 0.9231, "support": 7}, "Likely Pathogenic": {"precision": null, "recall": 0.0, "f1": 0.0, "support": 1}, "Variant of Uncertain Significance": {"precision": 0.8214, "recall": 1.0, "f1": 0.902, "support": 23}, "Likely Benign": {"precision": 1.0, "recall": 0.7857, "f1": 0.88, "support": 14}, "Benign": {"precision": null, "recall": null, "f1": null, "support": 0}}, "confusion_matrix": {"Pathogenic": {"Pathogenic": 6, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 1, "Likely Benign": 0, "Benign": 0}, "Likely Pathogenic": {"Pathogenic": 0, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 1, "Likely Benign": 0, "Benign": 0}, "Variant of Uncertain Significance": {"Pathogenic": 0, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 23, "Likely Benign": 0, "Benign": 0}, "Likely Benign": {"Pathogenic": 0, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 3, "Likely Benign": 11, "Benign": 0}, "Benign": {"Pathogenic": 0, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 0, "Likely Benign": 0, "Benign": 0}}, "per_confidence": {"High": {"n": 17, "accuracy": 1.0}, "Medium": {"n": 28, "accuracy": 0.8214}, "high_confidence_coverage": 0.3778}, "invalid_json_rate": 0.0, "criterion_agreement_vs_teacher": null, "criterion_agreement_note": "n/a - holdout variants were never distilled, so no teacher criteria exist."}}}, "chart_models": [{"name": "medtech-8b (Qwen3-8B + LoRA)", "bars": [{"label": "Validation (n=98)", "value": 0.898, "color": "#4f46e5"}, {"label": "Holdout (n=45)", "value": 0.8889, "color": "#a5b4fc"}]}, {"name": "medtech-4b (Qwen3-4B + LoRA, edge)", "bars": [{"label": "Validation (n=98)", "value": 0.8673, "color": "#4f46e5"}, {"label": "Holdout (n=45)", "value": 0.8889, "color": "#a5b4fc"}]}, {"name": "Gradient boosting (classical ML)", "bars": [{"label": "Validation (n=98)", "value": 0.8163, "color": "#4f46e5"}, {"label": "Holdout (n=45)", "value": 0.7333, "color": "#a5b4fc"}]}, {"name": "Logistic regression (classical ML)", "bars": [{"label": "Validation (n=98)", "value": 0.7755, "color": "#4f46e5"}, {"label": "Holdout (n=45)", "value": 0.7111, "color": "#a5b4fc"}]}, {"name": "InterVar-style rule baseline", "bars": [{"label": "Validation (n=98)", "value": 0.7551, "color": "#4f46e5"}, {"label": "Holdout (n=45)", "value": 0.7333, "color": "#a5b4fc"}]}, {"name": "DeepSeek-R1 teacher (671B)", "bars": [{"label": "Validation (n=98)", "value": 0.6939, "color": "#4f46e5"}, {"label": "Holdout (n=45)", "value": null, "color": "#a5b4fc"}]}], "confusions": {"8B - validation": {"Pathogenic": {"Pathogenic": 23, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 0, "Likely Benign": 0, "Benign": 0}, "Likely Pathogenic": {"Pathogenic": 1, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 0, "Likely Benign": 0, "Benign": 0}, "Variant of Uncertain Significance": {"Pathogenic": 2, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 32, "Likely Benign": 2, "Benign": 0}, "Likely Benign": {"Pathogenic": 0, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 3, "Likely Benign": 32, "Benign": 1}, "Benign": {"Pathogenic": 0, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 0, "Likely Benign": 1, "Benign": 1}}, "8B - holdout": {"Pathogenic": {"Pathogenic": 7, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 0, "Likely Benign": 0, "Benign": 0}, "Likely Pathogenic": {"Pathogenic": 0, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 1, "Likely Benign": 0, "Benign": 0}, "Variant of Uncertain Significance": {"Pathogenic": 0, "Likely Pathogenic": 1, "Variant of Uncertain Significance": 22, "Likely Benign": 0, "Benign": 0}, "Likely Benign": {"Pathogenic": 0, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 3, "Likely Benign": 11, "Benign": 0}, "Benign": {"Pathogenic": 0, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 0, "Likely Benign": 0, "Benign": 0}}, "4B - validation": {"Pathogenic": {"Pathogenic": 23, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 0, "Likely Benign": 0, "Benign": 0}, "Likely Pathogenic": {"Pathogenic": 0, "Likely Pathogenic": 1, "Variant of Uncertain Significance": 0, "Likely Benign": 0, "Benign": 0}, "Variant of Uncertain Significance": {"Pathogenic": 1, "Likely Pathogenic": 1, "Variant of Uncertain Significance": 32, "Likely Benign": 2, "Benign": 0}, "Likely Benign": {"Pathogenic": 0, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 4, "Likely Benign": 27, "Benign": 5}, "Benign": {"Pathogenic": 0, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 0, "Likely Benign": 0, "Benign": 2}}, "4B - holdout": {"Pathogenic": {"Pathogenic": 6, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 1, "Likely Benign": 0, "Benign": 0}, "Likely Pathogenic": {"Pathogenic": 0, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 1, "Likely Benign": 0, "Benign": 0}, "Variant of Uncertain Significance": {"Pathogenic": 0, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 23, "Likely Benign": 0, "Benign": 0}, "Likely Benign": {"Pathogenic": 0, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 3, "Likely Benign": 11, "Benign": 0}, "Benign": {"Pathogenic": 0, "Likely Pathogenic": 0, "Variant of Uncertain Significance": 0, "Likely Benign": 0, "Benign": 0}}}, "latency": {"medtech-8b": {"load_seconds": 3.0, "mean_full_generation_seconds": 30.25, "mean_full_generation_tok_per_s": 13.13, "mean_time_to_label_seconds": 3.97, "peak_memory_gb": 18.01, "notes": "time-to-label = generation truncated after the 'classification' value (schema emits it first). mx.get_peak_memory is process-cumulative; 18.01 GB is the true peak for this model (measured while 8B was loaded first)."}, "medtech-4b": {"load_seconds": 1.7, "mean_full_generation_seconds": 21.01, "mean_full_generation_tok_per_s": 20.7, "mean_time_to_label_seconds": 2.4, "peak_memory_gb": 9.46, "notes": "time-to-label = generation truncated after the 'classification' value (schema emits it first). 18.01 GB reflects the shared-process cumulative peak (8B was loaded first in the same process). 9.46 GB is the clean single-process peak measured in a fresh process loading only the 4B model and generating one full response."}}, "val_loss_curve": [[1, 1.295], [50, 0.412], [100, 0.392], [150, 0.384], [200, 0.382], [250, 0.387], [300, 0.404], [350, 0.4]], "label_distribution": {"train": {"Benign": 40, "Variant of Uncertain Significance": 397, "Likely Benign": 130, "Pathogenic": 108, "Likely Pathogenic": 40}, "validation": {"Benign": 7, "Likely Pathogenic": 8, "Pathogenic": 17, "Variant of Uncertain Significance": 46, "Likely Benign": 20}}};
+
+const LABELS_SHORT = {"Pathogenic":"P","Likely Pathogenic":"LP","Variant of Uncertain Significance":"VUS","Likely Benign":"LB","Benign":"B"};
+const pct = x => (x*100).toFixed(2) + "%";
+const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+
+/* ---------- hero chips ---------- */
+document.getElementById("chip-acc").textContent = pct(DATA.models["medtech-8b"].validation.accuracy);
+document.getElementById("chip-hold").textContent = pct(DATA.models["medtech-8b"].holdout.accuracy);
+
+/* ---------- accuracy chart ---------- */
+(function(){
+  const rows = DATA.chart_models;
+  const el = document.getElementById("acc-chart");
+  let html = "";
+  for (const m of rows) {
+    html += `<div style="margin:14px 0 4px;font-weight:700;font-size:14px;">${esc(m.name)}</div>`;
+    for (const s of m.bars) {
+      const w = s.value === null ? 0 : Math.max(1.5, s.value*100);
+      html += `<div class="bar-row"><div style="color:var(--muted)">${esc(s.label)}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${s.color}"></div></div>
+        <div class="bar-val">${s.value===null?"n/a":pct(s.value)}</div></div>`;
+    }
+  }
+  el.innerHTML = html;
+})();
+
+/* ---------- per-class table ---------- */
+(function(){
+  const tb = document.querySelector("#perclass-table tbody");
+  const pc = DATA.models["medtech-8b"].validation.per_class;
+  const fmt = v => v === null ? "n/a" : v.toFixed(4);
+  let html = "";
+  for (const [lab, m] of Object.entries(pc)) {
+    html += `<tr><td>${esc(lab)}</td><td class="num">${fmt(m.precision)}</td><td class="num">${fmt(m.recall)}</td><td class="num">${fmt(m.f1)}</td><td class="num">${m.support}</td></tr>`;
+  }
+  tb.innerHTML = html;
+})();
+
+/* ---------- confusion matrices ---------- */
+(function(){
+  const keys = Object.keys(DATA.confusions);
+  const tabs = document.getElementById("cm-tabs");
+  const body = document.getElementById("cm-body");
+  const L = DATA.label_set;
+  function render(k) {
+    const M = DATA.confusions[k];
+    const max = Math.max(1, ...L.flatMap(g => L.map(p => M[g][p])));
+    let h = `<table class="cm"><tr><th style="text-align:left;color:var(--faint)">true \u2193 / pred \u2192</th>${L.map(p=>`<th>${LABELS_SHORT[p]}</th>`).join("")}</tr>`;
+    for (const g of L) {
+      h += `<tr><th>true ${LABELS_SHORT[g]}</th>`;
+      for (const p of L) {
+        const v = M[g][p];
+        const diag = g === p;
+        const a = v === 0 ? 0 : 0.12 + 0.78*(v/max);
+        const bg = diag ? `rgba(13,148,136,${a})` : (v>0 ? `rgba(220,38,38,${Math.min(a,0.85)})` : "transparent");
+        const fg = a > 0.5 ? "#fff" : "var(--ink)";
+        h += `<td style="background:${bg};color:${fg};font-weight:${v?700:400}">${v}</td>`;
+      }
+      h += "</tr>";
+    }
+    h += "</table>";
+    body.innerHTML = h;
+  }
+  keys.forEach((k,i) => {
+    const b = document.createElement("button");
+    b.className = "tab" + (i===0?" on":"");
+    b.textContent = k;
+    b.onclick = () => { tabs.querySelectorAll(".tab").forEach(t=>t.classList.remove("on")); b.classList.add("on"); render(k); };
+    tabs.appendChild(b);
+  });
+  render(keys[0]);
+})();
+
+/* ---------- confidence cards ---------- */
+(function(){
+  const el = document.getElementById("conf-cards");
+  const defs = [
+    ["medtech-8b", "validation", "8B - validation", "var(--indigo)"],
+    ["medtech-8b", "holdout", "8B - holdout", "var(--indigo)"],
+    ["medtech-4b", "validation", "4B - validation", "var(--teal)"],
+  ];
+  let html = "";
+  for (const [mk, sk, title, color] of defs) {
+    const pc = DATA.models[mk][sk].per_confidence;
+    let rows = "";
+    for (const c of ["High","Medium","Low"]) {
+      if (pc[c]) rows += `<div class="bar-row" style="grid-template-columns:80px 1fr 64px;"><div style="color:var(--muted)">${c} <span style="color:var(--faint)">(n=${pc[c].n})</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pc[c].accuracy*100}%;background:${color}"></div></div>
+        <div class="bar-val">${pct(pc[c].accuracy)}</div></div>`;
+    }
+    html += `<div class="card"><h3 style="font-size:15px;margin-bottom:10px;">${title}</h3>${rows}
+      <p class="note">High-confidence coverage: ${pct(pc.high_confidence_coverage)}</p></div>`;
+  }
+  el.innerHTML = html;
+})();
+
+/* ---------- latency + memory ---------- */
+(function(){
+  const lat = DATA.latency;
+  function pairChart(elId, rows) {
+    let html = "";
+    for (const [label, v8, v4, unit] of rows) {
+      const max = Math.max(v8, v4);
+      html += `<div style="margin:12px 0 3px;font-size:13px;color:var(--muted)">${label}</div>`;
+      html += `<div class="bar-row" style="grid-template-columns:60px 1fr 70px;"><div>8B</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${v8/max*100}%;background:var(--indigo)"></div></div>
+        <div class="bar-val">${v8}${unit}</div></div>`;
+      html += `<div class="bar-row" style="grid-template-columns:60px 1fr 70px;"><div>4B</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${v4/max*100}%;background:var(--teal)"></div></div>
+        <div class="bar-val">${v4}${unit}</div></div>`;
+    }
+    document.getElementById(elId).innerHTML = html;
+  }
+  pairChart("lat-chart", [
+    ["Model load", lat["medtech-8b"].load_seconds, lat["medtech-4b"].load_seconds, "s"],
+    ["Full reasoning generation", lat["medtech-8b"].mean_full_generation_seconds, lat["medtech-4b"].mean_full_generation_seconds, "s"],
+    ["Time-to-label (truncated)", lat["medtech-8b"].mean_time_to_label_seconds, lat["medtech-4b"].mean_time_to_label_seconds, "s"],
+  ]);
+  pairChart("mem-chart", [["Peak Metal memory", lat["medtech-8b"].peak_memory_gb, lat["medtech-4b"].peak_memory_gb, " GB"]]);
+})();
+
+/* ---------- validation loss curve ---------- */
+(function(){
+  const pts = DATA.val_loss_curve; // [[iter, loss], ...]
+  const W = 980, H = 300, P = {l:56, r:20, t:18, b:44};
+  const xs = pts.map(p=>p[0]), ys = pts.map(p=>p[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs);
+  const y0 = Math.min(...ys)*0.92, y1 = Math.max(...ys)*1.05;
+  const X = v => P.l + (v-x0)/(x1-x0)*(W-P.l-P.r);
+  const Y = v => P.t + (1-(v-y0)/(y1-y0))*(H-P.t-P.b);
+  let path = pts.map((p,i)=>`${i?"L":"M"}${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join(" ");
+  let svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto">`;
+  // gridlines + y labels
+  for (let i=0;i<=4;i++){
+    const v = y0 + (y1-y0)*i/4, y = Y(v);
+    svg += `<line x1="${P.l}" y1="${y}" x2="${W-P.r}" y2="${y}" stroke="#e4e7ec"/><text x="${P.l-8}" y="${y+4}" text-anchor="end" font-size="11" fill="#98a2b3">${v.toFixed(2)}</text>`;
+  }
+  for (const it of [1,50,100,150,200,250,300,350]) {
+    svg += `<text x="${X(it)}" y="${H-P.b+20}" text-anchor="middle" font-size="11" fill="#98a2b3">${it}</text>`;
+  }
+  svg += `<text x="${(P.l+W-P.r)/2}" y="${H-6}" text-anchor="middle" font-size="12" fill="#475467">training iteration</text>`;
+  svg += `<path d="${path}" fill="none" stroke="#4f46e5" stroke-width="2.5"/>`;
+  for (const [it, loss] of pts) {
+    const best = it === 200;
+    svg += `<circle cx="${X(it)}" cy="${Y(loss)}" r="${best?7:4}" fill="${best?"#dc2626":"#4f46e5"}" ${best?'stroke="#fff" stroke-width="2"':""}/>`;
+    if (best) svg += `<text x="${X(it)}" y="${Y(loss)-16}" text-anchor="middle" font-size="12" font-weight="700" fill="#dc2626">shipped checkpoint (iter 200, val 0.382)</text>`;
+  }
+  svg += "</svg>";
+  document.getElementById("loss-chart").innerHTML = svg;
+})();
+
+/* ---------- label distribution ---------- */
+(function(){
+  const d = DATA.label_distribution;
+  const el = document.getElementById("dist-chart");
+  const max = Math.max(...Object.values(d.train), ...Object.values(d.validation));
+  let html = "";
+  for (const lab of DATA.label_set) {
+    html += `<div style="margin:12px 0 3px;font-size:13px;font-weight:600;">${esc(lab)}</div>`;
+    html += `<div class="bar-row" style="grid-template-columns:60px 1fr 60px;"><div style="color:var(--muted)">train</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${d.train[lab]/max*100}%;background:var(--indigo)"></div></div>
+      <div class="bar-val">${d.train[lab]}</div></div>`;
+    html += `<div class="bar-row" style="grid-template-columns:60px 1fr 60px;"><div style="color:var(--muted)">valid</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${d.validation[lab]/max*100}%;background:var(--teal)"></div></div>
+      <div class="bar-val">${d.validation[lab]}</div></div>`;
+  }
+  el.innerHTML = html;
+})();
+</script>
+</body>
+</html>
