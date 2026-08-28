@@ -37,6 +37,17 @@ Also fixed: prompt/response schema drift - the guidelines demanded a `predicted_
 | Baseline accuracy (valid) | 75.51% |
 | Baseline accuracy (holdout) | 73.33% |
 
+## Classical ML baselines (sklearn)
+
+Stronger comparators than the rule baseline, trained via `scripts/classical_baseline.py` on the 654 unique training trace IDs (verified ClinVar labels, seed 42, class_weight balanced). Features are restricted to what the student prompts show: gene, variant type, log10 gnomAD AF (+ missing flag), gnomAD PASS, and HGVS-derived consequence flags (frameshift, nonsense, synonymous, in-frame indel, splice region). `review_status`, `gold_stars`, and `prev_submissions_count` are excluded (students never see them; label-adjacent).
+
+| Model | Valid (98) | Holdout (45) | Pathogenic recall (valid) |
+|-------|-----------|--------------|---------------------------|
+| Logistic regression | 77.55% | 71.11% | 73.91% (17/23) |
+| Gradient boosting (HistGB) | 81.63% | 73.33% | 82.61% (19/23) |
+
+Both students beat the strongest classical baseline (+5.1/+8.2 pts valid, +15.6 pts holdout), with the largest edge on Pathogenic recall (23/23 vs 19/23). Full metrics: `data/app/classical_baseline_results.json`.
+
 ## Student (distilled Qwen3)
 
 | Model | Adapter | Data | Overall accuracy | High-conf precision |
@@ -109,6 +120,7 @@ PYTHONUNBUFFERED=1 .venv/bin/python -u scripts/generate_tbe_results.py --holdout
 ## Acceptance status
 
 - [x] Student beats InterVar baseline (8B **89.80%**, 4B **86.73%** vs 75.51% valid; both **88.89%** vs 73.33% holdout)
+- [x] Student beats classical ML baselines (gradient boosting 81.63% valid / 73.33% holdout, logistic regression 77.55% / 71.11%; students +5.1 to +8.2 pts valid, +15.6 pts holdout)
 - [ ] Student closes ≥ 40% of the R1 gap - **metric degenerate**: R1 (69.39%) is *below* the baseline (75.51%), so the pre-registered gap does not exist. Both students instead beat the baseline (+11.2/+14.3 pts) and the teacher (+17.3/+20.4 pts) outright.
 - [x] High-confidence precision ≥ 85% (8B **88.89%** valid / **94.74%** holdout; 4B **85.48%** valid / **100.00%** holdout)
 - [ ] Reasoning integrity ≥ 70% on manual review of 50 cases (**pending - community review bundle prepared**: `docs/REASONING_REVIEW.md`, 50 blind stratified cases + rubric; score returned verdicts with `scripts/score_reasoning_review.py`)

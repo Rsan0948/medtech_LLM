@@ -45,3 +45,6 @@ LLM Training/
 # Virtual environments
 .venv/
 venv/
+
+# HuggingFace release staging (multi-GB adapter weights - HF only, not GitHub)
+release/

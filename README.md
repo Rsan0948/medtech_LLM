@@ -32,6 +32,8 @@ Both students beat the InterVar-style rule baseline **and** their own DeepSeek-R
 | Model | Valid (98) | True holdout (45) | High-conf precision (valid / holdout) |
 |-------|-----------|-------------------|---------------------------------------|
 | InterVar rule baseline | 75.51% | 73.33% | n/a |
+| Logistic regression (classical ML) | 77.55% | 71.11% | n/a |
+| Gradient boosting (classical ML) | 81.63% | 73.33% | n/a |
 | DeepSeek R1 teacher | 69.39% | n/a | n/a |
 | **Qwen3-8B student** (`genomics_v2`) | **89.80%** | **88.89%** | **88.89%** / **94.74%** |
 | **Qwen3-4B student** (`genomics_v2_4b`, edge variant) | **86.73%** | **88.89%** | **85.48%** / **100.00%** |
@@ -41,7 +43,8 @@ Key findings (full analysis in [`docs/RESULTS.md`](docs/RESULTS.md)):
 - **Data quality beat compute.** The jump from 56% → 90% came from label refinement (keeping only teacher traces that agree with ClinVar ground truth - verifier-guided distillation), removing label leakage from prompts, and deduplication - not from bigger adapters or longer training.
 - **The students exceed their teacher by ~17–20 points** - they only ever trained on *correct* reasoning.
 - **Early stopping mattered.** Validation loss bottomed at iteration 200 (8B) / ~350 (4B) of a 1000-iter schedule; an automated watchdog stopped training.
-- **Pathogenic recall 23/23** on the validation split (both models) - zero missed pathogenic variants.
+- **Pathogenic recall 23/23** on the validation split (both models) - zero missed pathogenic variants. The gradient-boosting baseline misses 4 of 23 (82.6% recall).
+- **Stronger baselines, same conclusion.** Classical ML (gradient boosting on prompt-visible features: gene, variant type, gnomAD AF, HGVS consequence flags) reaches 81.63% valid / 73.33% holdout - both students still beat it by +5.1 to +8.2 points valid and +15.6 holdout (`scripts/classical_baseline.py`).
 
 > Adapter weights are not committed to git (`models/` is ignored); reproduce them with the training commands below.
 
