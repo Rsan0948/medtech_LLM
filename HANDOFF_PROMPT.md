@@ -1,24 +1,24 @@
-# MedTech LLM Distillation — Handoff Prompt
+# MedTech LLM Distillation - Handoff Prompt
 
 Use this prompt to continue optimizing the MedTech genomic variant-classification distillation project in a fresh conversation.
 
 ## Project basics
 
 - **Working directory:** `~/Documents/Projects/medtech_LLM-EVICTED`
-  - Note: the folder was renamed from `medtech_LLM` by an external event; all contents are intact. Renaming back would fix the `.venv` entry-point shebangs (they still point at the old path — use `.venv/bin/python -m <tool>` instead of `.venv/bin/<tool>`).
+  - Note: the folder was renamed from `medtech_LLM` by an external event; all contents are intact. Renaming back would fix the `.venv` entry-point shebangs (they still point at the old path - use `.venv/bin/python -m <tool>` instead of `.venv/bin/<tool>`).
 - **Virtual environment:** `.venv/` (Python 3.11.11)
 - **Key packages:** `mlx==0.32.2`, `mlx-lm==0.31.3`, `transformers`, `pydantic==2.13.4`, `pytest`, `black`, `ruff`, `mypy`
 - **Base model (local bf16):** `mlx-community/Qwen3-8B-bf16`
 - **Task:** Distill a Qwen3-8B student that classifies germline variants (BRCA1/2, MLH1, MSH2, MSH6, PMS2, PALB2, ATM, CHEK2, TP53) using ACMG/AMP criteria, evaluated against ClinVar verified labels.
 
-## Current status (2026-08-27): v2 complete — baseline and teacher beaten (8B + 4B)
+## Current status (2026-08-27): v2 complete - baseline and teacher beaten (8B + 4B)
 
-**Qwen3-8B — Validation split (98):** **89.80%** | Baseline 75.51% | Teacher 69.39% | High-conf precision **88.89%**
-**Qwen3-8B — True holdout (45):** **88.89%** | Baseline 73.33% | High-conf precision **94.74%**
-**Qwen3-4B (edge) — Validation split (98):** **86.73%** | High-conf precision **85.48%**
-**Qwen3-4B (edge) — True holdout (45):** **88.89%** | High-conf precision **100.00%**
+**Qwen3-8B - Validation split (98):** **89.80%** | Baseline 75.51% | Teacher 69.39% | High-conf precision **88.89%**
+**Qwen3-8B - True holdout (45):** **88.89%** | Baseline 73.33% | High-conf precision **94.74%**
+**Qwen3-4B (edge) - Validation split (98):** **86.73%** | High-conf precision **85.48%**
+**Qwen3-4B (edge) - True holdout (45):** **88.89%** | High-conf precision **100.00%**
 
-Acceptance criteria: (1) student > baseline ✅ (both models), (2) R1 gap closure — degenerate (R1 < baseline, documented in RESULTS.md), (3) high-conf precision ≥ 85% ✅ (both models), (4) reasoning integrity ≥ 70% manual review — **community review bundle ready at `docs/REASONING_REVIEW.md`** (50 blind cases + rubric; score verdicts with `scripts/score_reasoning_review.py`).
+Acceptance criteria: (1) student > baseline ✅ (both models), (2) R1 gap closure - degenerate (R1 < baseline, documented in RESULTS.md), (3) high-conf precision ≥ 85% ✅ (both models), (4) reasoning integrity ≥ 70% manual review - **community review bundle ready at `docs/REASONING_REVIEW.md`** (50 blind cases + rubric; score verdicts with `scripts/score_reasoning_review.py`).
 
 ## What changed in v2 (2026-08-26/27)
 
@@ -31,7 +31,7 @@ Acceptance criteria: (1) student > baseline ✅ (both models), (2) R1 gap closur
 ## What changed in v2.1 (2026-08-27, 4B edge variant)
 
 1. **Qwen3-4B trained with the same recipe** (`config/training_config_4b.yaml`, adapter `models/adapters/genomics_v2_4b`). Val loss bottomed at iter 350 (0.375); watchdog stopped at the 450 hard cap; shipped adapter = iter-400 checkpoint.
-2. **Metal crash workaround**: first 4B run died with `kIOGPUCommandBufferCallbackErrorImpactingInteractivity` while the machine was in interactive use. Fix: batch 8→4 / accum 2→4 (same effective batch 16) — smaller GPU command buffers. Peak mem 23.7 GB, ~88 tok/s.
+2. **Metal crash workaround**: first 4B run died with `kIOGPUCommandBufferCallbackErrorImpactingInteractivity` while the machine was in interactive use. Fix: batch 8→4 / accum 2→4 (same effective batch 16) - smaller GPU command buffers. Peak mem 23.7 GB, ~88 tok/s.
 3. **`train_mlx.sh` accepts a config path arg**; `generate_tbe_results.py` gained `--model/--adapter/--output` flags.
 4. **Community review bundle** (`scripts/build_review_bundle.py` → `docs/REASONING_REVIEW.md` + `data/app/reasoning_review_sample.json`) and scorer (`scripts/score_reasoning_review.py`).
 
@@ -56,16 +56,16 @@ Acceptance criteria: (1) student > baseline ✅ (both models), (2) R1 gap closur
 ## Critical implementation notes
 
 - `mlx-lm` LoRA invocation: `python -m mlx_lm lora --config <yaml>`; expects `train: true` in YAML.
-- `.venv` console scripts (black/mypy/pytest binaries) have broken shebangs from the folder rename — always use `.venv/bin/python -m <tool>`.
+- `.venv` console scripts (black/mypy/pytest binaries) have broken shebangs from the folder rename - always use `.venv/bin/python -m <tool>`.
 - `mask_prompt: true` trains only on assistant responses.
-- `make train` fails (`python: command not found`) — use `bash src/modeling/train_mlx.sh`.
+- `make train` fails (`python: command not found`) - use `bash src/modeling/train_mlx.sh`.
 
 ## Remaining work / next steps
 
 1. **Reasoning-integrity review** (acceptance criterion 4): share `docs/REASONING_REVIEW.md` with clinical-genomics folks (LinkedIn/HuggingFace); when verdicts come back as a text file (`1: PASS`, `2: FAIL (note)`, ...), run `.venv/bin/python scripts/score_reasoning_review.py verdicts.txt`.
 2. **Residual errors**: VUS ↔ Likely Benign boundary (see confusion matrices in RESULTS.md). Options: more training data near the boundary, better gnomAD/feature coverage (CADD/SIFT/REVEL are mostly null).
 3. **Protocol gap**: pre-registered test = 500 post-2024 variants; only 1,000 variants exist locally. New ClinVar ingestion needed for full compliance.
-4. If retraining: 8B optimum was iter 200, 4B was ~350 (early stop with patience ~3 evals); bigger LoRA/more iters overfit. For edge inference, the trained JSON schema emits `"classification"` first — truncate generation after the first line for a label-only answer. Consider Qwen3-14B only with new data.
+4. If retraining: 8B optimum was iter 200, 4B was ~350 (early stop with patience ~3 evals); bigger LoRA/more iters overfit. For edge inference, the trained JSON schema emits `"classification"` first - truncate generation after the first line for a label-only answer. Consider Qwen3-14B only with new data.
 
 ## Quick commands
 
@@ -85,7 +85,7 @@ PYTHONUNBUFFERED=1 .venv/bin/python -u scripts/generate_tbe_results.py --holdout
 .venv/bin/python src/evaluation/tbe_metrics.py data/app/student_tbe_results.jsonl
 .venv/bin/python src/evaluation/tbe_metrics.py data/app/student_tbe_results_holdout.jsonl
 
-# Lint / test (venv shebangs are broken — use python -m)
+# Lint / test (venv shebangs are broken - use python -m)
 .venv/bin/python -m pytest tests/ -q
 .venv/bin/python -m black --fast . && .venv/bin/python -m ruff check . && .venv/bin/python -m mypy src/
 ```

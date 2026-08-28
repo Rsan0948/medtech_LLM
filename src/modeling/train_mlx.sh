@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# MedTech Genomics v1.0 — MLX-LM LoRA fine-tuning launcher
+# MedTech Genomics v1.0 - MLX-LM LoRA fine-tuning launcher
 # Uses the local Qwen3-8B model and the YAML config in config/training_config.yaml
 
 CONFIG="${1:-config/training_config.yaml}"

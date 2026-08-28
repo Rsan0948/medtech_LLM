@@ -1,4 +1,4 @@
-# MedTech Genomic Variant Classification — Distillation Pipeline
+# MedTech Genomic Variant Classification - Distillation Pipeline
 
 > **A privacy-first, auditable reasoning system for ACMG/AMP genomic variant classification.**  
 > This project distills reasoning from a large teacher model (DeepSeek R1) into a small, local student model (Qwen3 via MLX LoRA) so variant classification can run on-device in clinical or research environments.
@@ -11,7 +11,7 @@
 
 ## What this is
 
-Clinical genomic interpretation is the bottleneck in precision medicine. Every detected variant must be classified into one of five ACMG tiers — from Pathogenic to Benign — using the 2015 ACMG/AMP guidelines. Today that work is largely manual and expensive.
+Clinical genomic interpretation is the bottleneck in precision medicine. Every detected variant must be classified into one of five ACMG tiers - from Pathogenic to Benign - using the 2015 ACMG/AMP guidelines. Today that work is largely manual and expensive.
 
 This repository documents an end-to-end **reasoning distillation** pipeline that:
 
@@ -31,17 +31,17 @@ Both students beat the InterVar-style rule baseline **and** their own DeepSeek-R
 
 | Model | Valid (98) | True holdout (45) | High-conf precision (valid / holdout) |
 |-------|-----------|-------------------|---------------------------------------|
-| InterVar rule baseline | 75.51% | 73.33% | — |
-| DeepSeek R1 teacher | 69.39% | — | — |
+| InterVar rule baseline | 75.51% | 73.33% | n/a |
+| DeepSeek R1 teacher | 69.39% | n/a | n/a |
 | **Qwen3-8B student** (`genomics_v2`) | **89.80%** | **88.89%** | **88.89%** / **94.74%** |
 | **Qwen3-4B student** (`genomics_v2_4b`, edge variant) | **86.73%** | **88.89%** | **85.48%** / **100.00%** |
 
 Key findings (full analysis in [`docs/RESULTS.md`](docs/RESULTS.md)):
 
-- **Data quality beat compute.** The jump from 56% → 90% came from label refinement (keeping only teacher traces that agree with ClinVar ground truth — verifier-guided distillation), removing label leakage from prompts, and deduplication — not from bigger adapters or longer training.
-- **The students exceed their teacher by ~17–20 points** — they only ever trained on *correct* reasoning.
+- **Data quality beat compute.** The jump from 56% → 90% came from label refinement (keeping only teacher traces that agree with ClinVar ground truth - verifier-guided distillation), removing label leakage from prompts, and deduplication - not from bigger adapters or longer training.
+- **The students exceed their teacher by ~17–20 points** - they only ever trained on *correct* reasoning.
 - **Early stopping mattered.** Validation loss bottomed at iteration 200 (8B) / ~350 (4B) of a 1000-iter schedule; an automated watchdog stopped training.
-- **Pathogenic recall 23/23** on the validation split (both models) — zero missed pathogenic variants.
+- **Pathogenic recall 23/23** on the validation split (both models) - zero missed pathogenic variants.
 
 > Adapter weights are not committed to git (`models/` is ignored); reproduce them with the training commands below.
 
@@ -201,9 +201,9 @@ See [`config/training_config.yaml`](config/training_config.yaml) and [`config/tr
 A distillation run is considered successful when the student:
 
 1. ✅ **Beats the floor:** Outperforms the InterVar rule-based baseline. (8B 89.80% vs 75.51%; 4B 86.73%)
-2. ⚠️ **Closes the gap:** ≥ 40% of the InterVar→R1 improvement. *Degenerate here* — R1 scored below the baseline, so the pre-registered gap does not exist; both students beat baseline and teacher outright.
+2. ⚠️ **Closes the gap:** ≥ 40% of the InterVar→R1 improvement. *Degenerate here* - R1 scored below the baseline, so the pre-registered gap does not exist; both students beat baseline and teacher outright.
 3. ✅ **High-confidence precision:** ≥ 85% when the student reports `High` confidence. (88.89–100%)
-4. ⏳ **Reasoning integrity:** ≥ 70% on a 50-case manual review. **Community review in progress** — see [`docs/REASONING_REVIEW.md`](docs/REASONING_REVIEW.md).
+4. ⏳ **Reasoning integrity:** ≥ 70% on a 50-case manual review. **Community review in progress** - see [`docs/REASONING_REVIEW.md`](docs/REASONING_REVIEW.md).
 
 Full criteria: [`docs/TBE_ACCEPTANCE_CRITERIA.md`](docs/TBE_ACCEPTANCE_CRITERIA.md)
 
@@ -214,7 +214,7 @@ Full criteria: [`docs/TBE_ACCEPTANCE_CRITERIA.md`](docs/TBE_ACCEPTANCE_CRITERIA.
 The last open acceptance criterion is a human audit of the student's clinical
 reasoning. If you have clinical-genomics expertise, the review bundle
 ([`docs/REASONING_REVIEW.md`](docs/REASONING_REVIEW.md)) contains 50 blind,
-stratified cases with a 4-point rubric — no setup required. Verdicts are scored
+stratified cases with a 4-point rubric - no setup required. Verdicts are scored
 with `scripts/score_reasoning_review.py`. Contributions welcome via issue or PR.
 
 ---
@@ -227,7 +227,7 @@ Launch a local Streamlit interface to classify variants with the trained model:
 make demo
 ```
 
-The demo lets you paste a variant profile (gene, HGVS, evidence) and returns the classification plus reasoning trace — all running locally.
+The demo lets you paste a variant profile (gene, HGVS, evidence) and returns the classification plus reasoning trace - all running locally.
 
 ---
 
@@ -287,7 +287,7 @@ Built by **Ruben Sanchez** as a portfolio demonstration of domain-specific reaso
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE). The base models (Qwen3, Apache-2.0) and teacher
+MIT - see [`LICENSE`](LICENSE). The base models (Qwen3, Apache-2.0) and teacher
 (DeepSeek-R1, MIT) licenses permit this use, including distillation. The
 clinical disclaimer in `LICENSE` applies: research prototype, not for
 diagnostic use without validation and regulatory review.

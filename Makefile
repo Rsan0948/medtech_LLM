@@ -1,4 +1,4 @@
-# MedTech LLM — Common tasks
+# MedTech LLM - Common tasks
 .PHONY: help install install-all lint format test data train evaluate demo clean
 
 # Prefer the project venv when it exists so targets work without activation.

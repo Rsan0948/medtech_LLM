@@ -130,20 +130,20 @@ If you want to use a HuggingFace repo instead, change `model:` in `config/traini
 
 ### Out of memory
 
-Option A — enable gradient checkpointing (slower but less RAM):
+Option A - enable gradient checkpointing (slower but less RAM):
 
 ```yaml
 grad_checkpoint: true
 ```
 
-Option B — reduce batch size or effective batch size:
+Option B - reduce batch size or effective batch size:
 
 ```yaml
 batch_size: 2
 gradient_accumulation_steps: 8  # still effective batch 16
 ```
 
-Option C — use a 4-bit quantized base model (QLoRA). This requires converting the model first:
+Option C - use a 4-bit quantized base model (QLoRA). This requires converting the model first:
 
 ```bash
 python -m mlx_lm.convert \

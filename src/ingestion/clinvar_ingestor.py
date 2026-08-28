@@ -15,7 +15,7 @@ from schemas.variant_trace_v1 import (
     VerifiedOutcome,
 )
 
-# Hereditary cancer gene panel — focused POC scope
+# Hereditary cancer gene panel - focused POC scope
 TARGET_GENES = ["BRCA1", "BRCA2", "MLH1", "MSH2", "MSH6", "PMS2", "PALB2", "ATM", "CHEK2", "TP53"]
 
 NCBI_BASE = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
@@ -190,7 +190,7 @@ class ClinVarIngestor:
             "variant_type", "single nucleotide variant"
         )
 
-        # gnomAD allele frequency (not directly in esummary — default to None)
+        # gnomAD allele frequency (not directly in esummary - default to None)
         # CADD/SIFT/PolyPhen also not in esummary; these would require Ensembl VEP enrichment
         # We store what we have; the PromptFactory gracefully handles None fields as "N/A"
 

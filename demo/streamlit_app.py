@@ -1,5 +1,5 @@
 """
-MedTech Variant Classifier — Local Demo
+MedTech Variant Classifier - Local Demo
 
 A lightweight Streamlit interface for the distilled MLX student model.
 All inference runs locally; no genomic data is sent to external APIs.

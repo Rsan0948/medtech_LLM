@@ -32,20 +32,20 @@ N_CASES = 50
 SEED = 42
 
 RUBRIC = """\
-## Review rubric — what counts as "integrity"
+## Review rubric - what counts as "integrity"
 
 Judge the **reasoning**, not the final label. A case **FAILS** if any of these hold:
 
-1. **Invalid criterion** — an ACMG/AMP code is triggered that does not apply
+1. **Invalid criterion** - an ACMG/AMP code is triggered that does not apply
    (e.g., claiming BA1 with a gnomAD AF far below 5%).
-2. **Fabricated evidence** — a number or fact is cited that is not present in
+2. **Fabricated evidence** - a number or fact is cited that is not present in
    the variant evidence (e.g., an invented CADD score).
-3. **Incomplete check** — the trace does not check BOTH pathogenic and benign
+3. **Incomplete check** - the trace does not check BOTH pathogenic and benign
    criteria before concluding.
-4. **Incoherent logic** — the conclusion contradicts the stated criteria
+4. **Incoherent logic** - the conclusion contradicts the stated criteria
    (e.g., argues benign throughout, then outputs Pathogenic).
 
-Otherwise the case **PASSES** — even if you suspect the final label is wrong.
+Otherwise the case **PASSES** - even if you suspect the final label is wrong.
 Use **BORDERLINE** sparingly, when a violation is ambiguous.
 """
 
@@ -116,7 +116,7 @@ def main() -> None:
         "rule baseline (75.5%) and its own DeepSeek-R1 teacher (69.4%).",
         "",
         "**What we need from you:** clinical-genomics expertise to audit whether "
-        "the model's *reasoning* is sound — not just whether the label is right. "
+        "the model's *reasoning* is sound - not just whether the label is right. "
         "This is the last unchecked acceptance criterion (target: ≥ 70% of 50 "
         "cases pass).",
         "",
@@ -124,7 +124,7 @@ def main() -> None:
         "the model, its predicted label/confidence, and its full reasoning trace. "
         "Apply the rubric and record `PASS`, `FAIL`, or `BORDERLINE` per case "
         "(optionally with a one-line note). The ClinVar label is deliberately "
-        "hidden to keep the review blind. Submit verdicts however is easiest — "
+        "hidden to keep the review blind. Submit verdicts however is easiest - "
         "a filled copy of this file, a spreadsheet, or a list like "
         "`1: PASS, 2: FAIL (invented CADD score), ...`.",
         "",
@@ -148,7 +148,7 @@ def main() -> None:
             "",
             f"> {r['student_reasoning_trace'].strip()}",
             "",
-            "**Verdict:** `PASS / FAIL / BORDERLINE` — note: ______",
+            "**Verdict:** `PASS / FAIL / BORDERLINE` - note: ______",
             "",
             "---",
             "",

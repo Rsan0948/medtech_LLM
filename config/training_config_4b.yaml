@@ -1,6 +1,6 @@
 # ZDS v1.0 Training Configuration (MedTech Optimized)
 # Aggressive config for Apple Silicon with 64 GB unified memory.
-# Model Target: Qwen3-4B-Instruct (local path) — edge/mobile variant
+# Model Target: Qwen3-4B-Instruct (local path) - edge/mobile variant
 
 # Dataset Paths
 data: "data/app/training_data/" # Should contain train.jsonl and valid.jsonl
