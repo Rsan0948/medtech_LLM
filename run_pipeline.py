@@ -90,11 +90,65 @@ def stage_format():
 def stage_train():
     print("\n[Stage 6] MLX LoRA Fine-Tuning")
     print("-" * 40)
+    # Validate the training config BEFORE launching (Pydantic schema).
+    from schemas.training_config import load_and_validate
+
+    try:
+        load_and_validate("config/training_config.yaml")
+        print("Config validation: OK")
+    except Exception as e:
+        print(f"ERROR: config/training_config.yaml failed validation: {e}")
+        sys.exit(1)
+    # NOTE: orchestration intentionally stays bash (train_mlx.sh wraps the
+    # mlx_lm.lora CLI and tee's the log). Moving this into Python would only
+    # re-implement the CLI's argument handling; keep the shell boundary thin.
     train_script = os.path.join(os.path.dirname(__file__), "src", "modeling", "train_mlx.sh")
     result = subprocess.run(["bash", train_script], cwd=os.path.dirname(os.path.abspath(__file__)))
     if result.returncode != 0:
         print(f"ERROR: Training script exited with code {result.returncode}")
         sys.exit(result.returncode)
+
+
+def stage_check():
+    """Preflight: credentials, config validity, and expected data dirs.
+
+    Run this before --stage teacher (API spend) or --stage train (8h GPU).
+    """
+    print("\n[Preflight] Environment + Config Check")
+    print("-" * 40)
+    failures = 0
+
+    # 1. DeepSeek API key (.env is loaded by r1_teacher; here we just verify)
+    from dotenv import load_dotenv
+
+    load_dotenv()
+    if os.getenv("DEEPSEEK_API_KEY"):
+        print("  OK   DEEPSEEK_API_KEY is set")
+    else:
+        print("  FAIL DEEPSEEK_API_KEY not set. Copy .env.example to .env and add your key.")
+        failures += 1
+
+    # 2. Training config validates
+    from schemas.training_config import load_and_validate
+
+    try:
+        load_and_validate("config/training_config.yaml")
+        print("  OK   config/training_config.yaml is valid")
+    except Exception as e:
+        print(f"  FAIL config/training_config.yaml: {e}")
+        failures += 1
+
+    # 3. Expected directories
+    for d in ("data/raw", "data/app", "models/adapters", "logs"):
+        if Path(d).exists():
+            print(f"  OK   {d}/ exists")
+        else:
+            print(f"  WARN {d}/ missing (will be created on demand)")
+
+    if failures:
+        print(f"\nPreflight FAILED ({failures} problem(s)). Fix before spending API/GPU time.")
+        sys.exit(1)
+    print("\nPreflight passed.")
 
 
 def stage_evaluate():
@@ -115,6 +169,7 @@ def stage_evaluate():
 
 
 STAGES = {
+    "check": stage_check,
     "ingest": stage_ingest,
     "filter": stage_filter,
     "prompts": stage_prompts,

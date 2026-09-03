@@ -120,6 +120,13 @@ cp .env.example .env
 # Edit .env and add your DeepSeek API key
 ```
 
+Then run the preflight to verify credentials, training-config validity, and
+expected directories before any API- or GPU-bound stage:
+
+```bash
+python run_pipeline.py --stage check
+```
+
 > **Note:** the dataset (`data/`) and adapter weights (`models/`) are not committed
 > to git. Stages 1–5 regenerate the data (stage 4 needs a DeepSeek API key);
 > training reproduces the adapters. Base models download automatically from
